@@ -6,8 +6,6 @@ from dateutil.easter import *
 from dateutil.parser import *
 from datetime import date
 from bs4 import BeautifulSoup
-
-# Begin setup for Google Calendar object
 import httplib2
 import os
 
@@ -53,7 +51,7 @@ def get_credentials():
             credentials = tools.run_flow(flow, store, flags)
         else: # Needed only for compatibility with Python 2.6
             credentials = tools.run(flow, store)
-        print('Storing credentials to ' + credential_path)
+        #print('Storing credentials to ' + credential_path)
     return credentials
 
 class GoogleCalendar(object):
@@ -137,11 +135,6 @@ class GoogleCalendar(object):
         return result
 
 
-
-
-
-
-
 def MardiGrasDate():
     """
     A function to return the date of Mardi Gras in the current year.
@@ -150,6 +143,7 @@ def MardiGrasDate():
     thiseaster = easter(date.today().year)
     MardiGras = thiseaster - datetime.timedelta(days=47)
     return MardiGras
+
 
 def timedeltaformat(timedelta, num_lines = 2):
     """
@@ -193,6 +187,7 @@ def timedeltaformat(timedelta, num_lines = 2):
         i += 1
     return result
 
+
 def parseRTATimeDelta(timespanstring):
     """
     Takes in a string time span formatted along the New Orleans RTA Website.
@@ -207,30 +202,37 @@ def parseRTATimeDelta(timespanstring):
         return datetime.timedelta(minutes=int(timespanstring.replace(" min","")))
 
 
-
-def parselines(occasion,num_chars=13,padding=1):
+def parselines(occasion,num_lines=2,num_chars=13,padding=1):
     """
     Parses a string (occasion) into two lines of num_chars length.
-    :param occasion: A string of less than 2x num_chars in length
+    :param occasion: A string of less than num_lines x num_chars in length
+    :param num_lines: An integer indicating the number of lines to parse the output into
     :param num_chars: An integer indicating the number of characters in each line
     :param padding: An integer indicating the number of trailing spaces to be added to each line
     :return: a list of strings, each numchars+padding in length, reflecting the parsed output
     """
     assert type(occasion) == str
     assert type(num_chars) == int
+    assert type(num_lines) == int
     assert type(padding) == int
     # check length of occasion string and parse into two lines as best possible
-    if len(occasion) > 2*num_chars:
+    # if the overall string is too long, raise ValueError
+    if len(occasion) > num_lines*num_chars:
         raise ValueError('Occasion string too long for display')
+    # Otherwise parse it into lines using the textwrap function
     output = textwrap.wrap(occasion, num_chars)
-    if len(output) > 2:
-        output = [1, 1]
-        output[0] = occasion[0:num_chars]
-        output[1] = occasion[num_chars:]
-    if len(output) == 1: output.append("")
+    # if the output is longer than the number of lines available, we've gotta break up some words
+    if len(output) > num_lines:
+        # re-initialize the output list
+        output = [1]*num_lines
+        # fill the first line, then the second, until we're out of characters in the input
+        for i in range(num_lines):
+            output[i] = occasion[i*num_chars:(i+1)*num_chars]
+    # if there are lines we didn't use, add those to the list
+    if len(output) < num_lines: output += ['']*(num_lines - len(output))
     # pad length of string so that all characters in sign are accounted for
-    output[0] = output[0].ljust(num_chars+padding)
-    output[1] = output[1].ljust(num_chars+padding)
+    for i in range(num_lines):
+        output[i] = output[i].ljust(num_chars+padding)
     return output
 
 
@@ -248,56 +250,99 @@ class Message(object):
         return self.text
     def __str__(self):
         return str(self.text)
-    def update(self):
+    def update(self,num_lines,num_chars):
         raise NotImplementedError
+
 
 class BasicTextMessage(Message):
     """
     Simplest of message classes.  Has a single static message that it displays.
-    Takes in a message - either a string or a list of strings of length 2
+    Takes in a message - either a string or a list of strings
     """
     def __init__(self,message):
         Message.__init__(self)
-        if type(message) == str:
-            self.text = parselines(message,17,0)
-        elif type(message) == list:
+        self.message = message
+
+    def update(self, num_lines, num_chars):
+        if type(self.message) == str:
+            self.text = parselines(self.message[:num_lines * num_chars],num_lines=num_lines,num_chars=num_chars,padding=0)
+        elif type(self.message) == list:
             self.text = []
-            if len(message) > 2:
+            if len(self.message) > num_lines:
                 raise ValueError("List of strings too long for display.")
-            for i in range(2):
-                assert type(message[i]) == str, "Items in list for message must be of type string."
-                assert len(message[i]) < 18, "Each string in message must be 17 chars or less."
-            self.text.append(message[0].ljust(17))
-            self.text.append(message[1].ljust(17))
+            for i in range(num_lines):
+                assert type(self.message[i]) == str, "Items in list for message must be of type string."
+                assert len(self.message[i]) < num_chars + 1, "Each string in message must be " +num_chars+ " chars or less."
+                self.text.append(self.message[i].ljust(num_chars))
 
 
-class SpecificDateMessage(Message):
+class DateMessage(Message):
+    """
+    A subclass of message which displays the amount of time until a specific date and time.
+    This "level" of the class structure provides a common update() method which will be used
+    by all different subclasses.  The different subclasses of DateMessage will initialize differently
+    and will all have different ways of determining the latest date using the nextdate() method.
+    """
+    def __init__(self):
+        # this class should not be initialized directly -- only subclasses should be initialized
+        Message.__init__(self)
+
+    def nextdate(self):
+        """
+        Subclasses must overwrite this method.  It must return a datetime object representing the time
+        that the message is counting down to.
+        :return: a datetime object
+        """
+        raise NotImplementedError
+
+    def update(self,num_lines,num_chars):
+        # get next date from nextdate function, calculate time delta and format time delta
+        """
+        Updates self.text with the remaining time and to the specifications of the display.
+        Returns nothing.
+        :param num_lines: integer indicating number of lines in the display
+        :param num_chars: integer indicating number of characters in each line of the display
+        """
+        self.text = []
+        nextdate = self.nextdate()
+        timedelta = nextdate - datetime.datetime.now()
+        formattedtimedelta = timedeltaformat(timedelta, min(num_lines, 2))
+
+        # if there are more lines than the timedelta function allows, pad the returned list with blanks
+        if num_lines > 2:
+            formattedtimedelta += ['   ']*(num_lines - 2)
+        formattedtext = parselines(self.occasion[:num_lines * num_chars], num_lines=num_lines,
+                                   num_chars=num_chars-4, padding=1)
+        for i in range(num_lines):
+            self.text.append(formattedtext[i]+formattedtimedelta[i])
+
+
+class SpecificDateMessage(DateMessage):
     """
     A SpecificDateMessage is a subclass of Message that occurs on the same date each year.
     (e.g. Valentine's Day, Tax Day)
     To initialize, it needs a string of no more than 26 characters describing the occasion and a date.
     The date can be of an arbitrary year, since the time span will be calculated based on the next occurrence.
     """
-    def __init__(self,Occasion,Date):
+    def __init__(self, Occasion, Date):
         Message.__init__(self)
         # ensure initialization arguments are of the proper type
-        assert isinstance(Date,datetime.date), "Date passed must be datetime object."
+        assert type(Occasion) == str
+        assert isinstance(Date,datetime.datetime) or isinstance(Date,datetime.date), "Date passed must be datetime object."
+        if isinstance(Date,datetime.date): Date = datetime.datetime.combine(Date,datetime.time.min)
         self.date = Date
-        self.occasion = parselines(Occasion)
+        self.occasion = Occasion
 
-    def update(self):
+    def nextdate(self):
         #determine the date of this year's occasion
-        thisyeardate = self.date.replace(year = self.date.today().year)
-        # if the date hasn't passed yet this year, calculate time delta to the date in this year
+        thisyeardate = self.date.replace(year = datetime.datetime.now().year)
+        # if the date hasn't passed yet this year, return this year date
         if thisyeardate - self.date.today() > datetime.timedelta():
-            timedelta = thisyeardate - self.date.today()
-        # if the date has passed this year, calculate time delta to the date in next year
+            return thisyeardate
+        # if the date has passed this year, return the date in the next year
         else:
-            timedelta = self.date.replace(year = self.date.today().year + 1) - self.date.today()
-        # update self.text with the occasion string, and the time delta, formatted using timedeltaformat function
-        self.text = []
-        self.text.append(self.occasion[0] + timedeltaformat(timedelta)[0])
-        self.text.append(self.occasion[1] + timedeltaformat(timedelta)[1])
+            return self.date.replace(year = datetime.datetime.now().year + 1)
+
 
 class OneTimeSpecificDateMessage(SpecificDateMessage):
     """
@@ -305,21 +350,19 @@ class OneTimeSpecificDateMessage(SpecificDateMessage):
     As a result, it doesn't check the version of itself in the next year.
     Raises ValueError if the date/time has already passed and the update() method is called.
     """
-    def __init__(self,Occasion,Date):
-        SpecificDateMessage.__init__(self,Occasion,Date)
-    def update(self):
-        # if the date hasn't passed, calculate time delta
+    def __init__(self, Occasion, Date):
+        SpecificDateMessage.__init__(self, Occasion, Date)
+
+    def nextdate(self):
+        # if the date hasn't passed, return the date
         if self.date - datetime.datetime.now() > datetime.timedelta():
-            timedelta = self.date - datetime.datetime.now()
+            return self.date
         # if the date has passed, raise ValueError
         else:
             raise ValueError("Specific Datemessage: " + self.occasion[0] + " has passed.")
-        # update self.text with the occasion string, and the time delta, formatted using timedeltaformat function
-        self.text = []
-        self.text.append(self.occasion[0] + timedeltaformat(timedelta)[0])
-        self.text.append(self.occasion[1] + timedeltaformat(timedelta)[1])
 
-class VaryingDateMessage(Message):
+
+class VaryingDateMessage(DateMessage):
     """
     A VaryingDateMessage is a subclass of Message that does not occur on the same date each year.
     (e.g. Mardi Gras, Chinese New Year, Super Bowl Sunday)
@@ -330,25 +373,20 @@ class VaryingDateMessage(Message):
         Message.__init__(self)
         assert type(Occasion) == str, "Occasion must be string."
         assert isinstance(datefunction,(types.FunctionType, types.BuiltinFunctionType)), "DateFunction must be a function."
-        self.occasion = parselines(Occasion)
+        self.occasion = Occasion
         self.datefunction = datefunction
 
-    def update(self):
+    def nextdate(self):
         #use date function to update the appropriate date for this year
-        thisyeardate = self.datefunction()
-
-        #remainder of this is the same as the specificdatemessage function
+        thisyeardate = datetime.datetime.combine(self.datefunction(), datetime.time.min)
 
         # if the date hasn't passed yet this year, calculate time delta to the date in this year
-        if thisyeardate - thisyeardate.today() > datetime.timedelta():
-            timedelta = thisyeardate - thisyeardate.today()
+        if thisyeardate - datetime.datetime.now() > datetime.timedelta():
+            return thisyeardate
         # if the date has passed this year, calculate time delta to the date in next year
         else:
-            timedelta = thisyeardate.replace(year = thisyeardate.today().year + 1) - thisyeardate.today()
-        # update self.text with the occasion string, and the time delta, formatted using timedeltaformat function
-        self.text = []
-        self.text.append(self.occasion[0] + timedeltaformat(timedelta)[0])
-        self.text.append(self.occasion[1] + timedeltaformat(timedelta)[1])
+            return thisyeardate.replace(year = datetime.datetime.now().year + 1)
+
 
 class TransitMessageURL(Message):
     """
@@ -364,8 +402,8 @@ class TransitMessageURL(Message):
         assert type(url) == str, "Url must be passed in as string."
         # Assign self variables and parse friendly name into two lines
         self.url = url
-        self.friendlyname = parselines(friendlyname,9,1)
-    def update(self):
+        self.friendlyname = friendlyname
+    def update(self, num_lines, num_chars):
         errors = "None"
         try:
             # Pull the http information, read it into memory, and parse using BeautifulSoup
@@ -375,113 +413,52 @@ class TransitMessageURL(Message):
 
             # Parse arrival information from the next two buses/streetcars out of the soup
 
-            bus1 = soup.find(id="bus1").string.strip()
-            time1 = soup.find(id="ts1").string.strip()
-            bus2 = soup.find(id="bus2").string.strip()
-            time2 = soup.find(id="ts2").string.strip()
+            bus = []
+            time = []
+            bus.append(soup.find(id="bus1").string.strip())
+            time.append(soup.find(id="ts1").string.strip())
+            bus.append(soup.find(id="bus2").string.strip())
+            time.append(soup.find(id="ts2").string.strip())
+            bus.append(soup.find(id="bus3").string.strip())
+            time.append(soup.find(id="ts3").string.strip())
         except urllib2.URLError:
             raise IOError("No Internet Connection.")
 
 
         # If no information is available, get cheeky about RTA's performance
-        if bus1 == "n/a":
+        if bus[0] == "n/a":
             errors = "RTAData"
 
         if errors == "None":
         # If information is available, format the info for consumption
-        # If we've gotten this far, there must be at least one set of time info
-        # Parse the first set of info without checking, then use try/except on second set
-            timedelta1 = parseRTATimeDelta(time1)
-            time1 = timedeltaformat(timedelta1, 1)[0]
-            try:
-                timedelta2 = parseRTATimeDelta(time2)
-                time2 = timedeltaformat(timedelta2,1)[0]
-            except ValueError:
-                bus2 = " - "
-                time2 = " - "
+            for i in range(3):
+                # for all of the 3 returns (RTA will only send back info about the first 3 buses)
+                try:
+                    timedelta = parseRTATimeDelta(time[i])
+                    time[i] = timedeltaformat(timedelta,1)[0]
+                except ValueError:
+                # if we get a ValueError, that means we've tried to pass some text to the timedelta function
+                # that means that there's no bus at this position, so fill with a dash
+                    bus[i] = " - "
+                    time[i] = " - "
+
+        # get the friendly name into the right length and number of lines
+        friendlyname = parselines(self.friendlyname, num_lines=num_lines, num_chars=num_chars-8, padding=1)
+
+        # determine what to put into the time and bus side of the message
+        bustext = []
+        if errors == "None":
+            for i in range(num_lines):
+                if i <= 3:
+                    bustext.append(str(bus[i]) + " " + str(time[i]))
+                else:
+                    bustext.append('       ')
+        else:
+            bustext = ["No Data", "Lol RTA"]
+            for i in range(num_lines - 2):
+                bustext.append('       ')
+
         # Update self.text with all the info we've generated
         self.text = []
-        if errors == "None":
-            self.text.append(self.friendlyname[0] + str(bus1) + " " + str(time1))
-            self.text.append(self.friendlyname[1] + str(bus2) + " " + str(time2))
-        elif errors == "Interwebs":
-            self.text.append(self.friendlyname[0] + "No Net ")
-            self.text.append(self.friendlyname[1] + "Connect")
-        else:
-            self.text.append(self.friendlyname[0] + "No Data")
-            self.text.append(self.friendlyname[1] + "Lol RTA")
-
-
-#TODO:
-# - make objects display-independent -- give the update method num_lines and width parameters
-
-# Testing google calendar onetimemessage creator
-
-Gcal = GoogleCalendar("ugqtbs0n8j2781647ammtahcag@group.calendar.google.com",get_credentials())
-messages = Gcal.create_messages(2)
-messages[0].update()
-messages[1].update()
-print messages[0], messages[1]
-
-# Testing basic text message class
-joke = BasicTextMessage("Napoleon Work Lol Finish       Nvr")
-print joke
-
-joke2 = BasicTextMessage(["Napoleon Work Lol", "Finish      Never"])
-print joke2
-
-# testing Transit Message URL Class
-
-StCharles = TransitMessageURL("http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=235&routecode=10123&direction=0","Streetcar")
-StCharles.update()
-print StCharles.get_message()
-
-MagBus = TransitMessageURL("http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=145&routecode=10122&direction=0","Magazine Bus")
-MagBus.update()
-print MagBus
-
-TchoupBus = TransitMessageURL("http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=58&routecode=10121&direction=0","Tchoup Bus")
-TchoupBus.update()
-print TchoupBus
-
-
-
-# testing specific date message class
-
-# newdate = datetime.date(2010,10,1)
-# print type(newdate)
-# print newdate
-# newdelta = newdate.today() - newdate
-# print newdelta
-# print newdelta > datetime.timedelta()
-
-# testing text wrap handling
-
-# specdate = SpecificDateMessage("test testtest test",datetime.date(2016,1,1))
-# print specdate.occasion
-# specdate.update()
-# print specdate.get_message()
-# specdate = SpecificDateMessage("Janet Birthday",datetime.date(2011,3,24))
-# print specdate.occasion
-# specdate.update()
-# print specdate.get_message()
-# specdate = SpecificDateMessage("Napolean Construct Finish",newdate)
-# print specdate.occasion
-# specdate.update()
-# print specdate.get_message()
-
-# testing varying date message class
-
-yoyo = VaryingDateMessage('Mardi Gras Woo Woo',MardiGrasDate)
-yoyo.update()
-print yoyo
-
-# testing timedeltaformat function
-#
-# bigtimedelta = datetime.timedelta(weeks=65,days=50,hours=1)
-# print timedeltaformat(bigtimedelta)
-# print timedeltaformat(bigtimedelta,1)
-#
-# mediumtimedelta = datetime.timedelta(weeks=10,days=5,hours=1,minutes=15)
-# print timedeltaformat(mediumtimedelta)
-# print timedeltaformat(mediumtimedelta,1)
+        for i in range(num_lines):
+            self.text.append(friendlyname[i]+bustext[i])
