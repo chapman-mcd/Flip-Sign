@@ -1,7 +1,8 @@
 import textwrap
 import datetime
 import types
-import urllib2
+from urllib.request import urlopen
+import urllib.error
 from dateutil.easter import *
 from dateutil.parser import *
 from datetime import date
@@ -167,18 +168,18 @@ def timedeltaformat(timedelta, num_lines = 2):
         if i > 5:
             break
         #if there is a nonzero number of this time span
-        if remainingseconds / divisors[i][0] > 0:
+        if remainingseconds // divisors[i][0] > 0:
             #if we only have one line left, check the next lower time span to see if it will fit (e.g. use '6wk' instead of '1mo')
             if num_lines-len(result) == 1:
                 #if the next lower time span fits on one line, use that
-                if len(str(remainingseconds/divisors[i+1][0])+divisors[i+1][1]) <= 3:
-                    lengthcheck = str(remainingseconds/divisors[i+1][0])+divisors[i+1][1]
+                if len(str(remainingseconds // divisors[i+1][0])+divisors[i+1][1]) <= 3:
+                    lengthcheck = str(remainingseconds // divisors[i+1][0])+divisors[i+1][1]
                 #otherwise use the original time span
                 else:
-                    lengthcheck = str(remainingseconds / divisors[i][0]) + divisors[i][1]
+                    lengthcheck = str(remainingseconds // divisors[i][0]) + divisors[i][1]
             #if we have 2 lines left, just use this time span
             else:
-                lengthcheck = str(remainingseconds/divisors[i][0])+divisors[i][1]
+                lengthcheck = str(remainingseconds // divisors[i][0])+divisors[i][1]
 
             #if the total is not 3 characters, add trailing spaces to keep everything the same length
             if len(lengthcheck) == 2: lengthcheck += " "
@@ -407,7 +408,7 @@ class TransitMessageURL(Message):
         errors = "None"
         try:
             # Pull the http information, read it into memory, and parse using BeautifulSoup
-            rtaurl = urllib2.urlopen(self.url)
+            rtaurl = urlopen(self.url)
             content = rtaurl.read()
             soup = BeautifulSoup(content, "html.parser")
 
@@ -421,7 +422,7 @@ class TransitMessageURL(Message):
             time.append(soup.find(id="ts2").string.strip())
             bus.append(soup.find(id="bus3").string.strip())
             time.append(soup.find(id="ts3").string.strip())
-        except urllib2.URLError:
+        except urllib.error.URLError:
             raise IOError("No Internet Connection.")
 
 
