@@ -23,9 +23,9 @@ except ImportError:
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/calendar-python-quickstart.json
-SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
-APPLICATION_NAME = 'Google Calendar API Python Quickstart'
+APPLICATION_NAME = 'Sign Project'
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -41,7 +41,7 @@ def get_credentials():
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
     credential_path = os.path.join(credential_dir,
-                                   'calendar-python-quickstart.json')
+                                   'sign_project.json')
 
     store = oauth2client.file.Storage(credential_path)
     credentials = store.get()
@@ -54,6 +54,7 @@ def get_credentials():
             credentials = tools.run(flow, store)
         #print('Storing credentials to ' + credential_path)
     return credentials
+
 
 class GoogleCalendar(object):
     """

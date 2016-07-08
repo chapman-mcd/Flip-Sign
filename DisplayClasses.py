@@ -34,6 +34,38 @@ class SimpleDisplay(Display):
         for i in range(len(states)):
             print(states[i])
 
+class SerialLCDDisplay(Display):
+    """
+    This class is an LCD display controlled via serial -- it takes in a bytestring of length num_chars * num_lines and
+    displays it.
+    """
+    def __init__(self,num_lines,num_chars,device,frequency,reactiontime):
+        """
+        :param num_lines: number of lines in the display
+        :param num_chars: number of characters in each line of the display
+        :param device: device location of the serial connection (e.g. '/dev/tty.usbserial')
+        :param frequency: baud rate of the connection (e.g. 9600)
+        :param reactiontime: delay between each update action, seconds
+        """
+        Display.__init__(self,num_lines,num_chars)
+        self.device = device
+        self.frequency = frequency
+        self.reactiontime = reactiontime
+    def update(self,transitionfunction,messageobject):
+        import serial
+        import time
+        ser = serial.Serial(self.device,self.frequency)
+        time.sleep(self.reactiontime)
+        states = self.determine_transition(transitionfunction, messageobject)
+        for i in range(len(states)):
+            output = ""
+            for z in range(self.num_lines):
+                output += states[i][z]
+            ser.write(output.encode(encoding='us-ascii',errors='strict'))
+            time.sleep(self.reactiontime)
+        ser.close()
+
+
 
 def SimpleTransition(current_state,desired_state):
     """
@@ -44,3 +76,14 @@ def SimpleTransition(current_state,desired_state):
     :return: in this case, just a single-element list containing the desired state
     """
     return [desired_state]
+
+def FlashStarsTransition(current_state,desired_state):
+    """
+    This transition function flashes all asterisks, then blanks, then asterisks, then the desired message.
+    :param current_state: the current state of the display - again ignored by this function
+    :param desired_state: the desired display state
+    :return: a list containing the display states to be passed through
+    """
+    num_lines = len(current_state)
+    num_chars = len(current_state[0])
+    return [['*'*num_chars]*num_lines,[' '*num_chars]*num_lines,['*'*num_chars]*num_lines,desired_state]
