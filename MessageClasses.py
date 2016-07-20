@@ -11,6 +11,7 @@ import httplib2
 import os
 
 from apiclient import discovery
+from apiclient import errors
 import oauth2client
 from oauth2client import client
 from oauth2client import tools
@@ -189,6 +190,162 @@ def timedeltaformat(timedelta, num_lines = 2):
         i += 1
     return result
 
+def improvedtimedeltaformat(timedelta, num_lines = 2):
+    """
+    Takes in a time span and formats it for display on num_lines of 3 chars each. (e.g. ['9mo', '2d']
+    This version is way better, because it better conforms to our idea of "months" - e.g. july 15th is 2 months and 3
+    days after may 12th.  Previous version assumed all months had 30 days.
+
+    Max input time delta is 9.999 years.  If this is exceeded, return error.
+    :param timedelta: A timedelta formatted as per python datetime module
+    :param num_lines: integer number of lines, max 2
+    :return: a list 3-character strings of length num_lines representing the time span in text
+    """
+    # Confirm proper inputs
+    assert type(num_lines) == int
+    assert isinstance(timedelta,datetime.timedelta)
+    assert timedelta.total_seconds() < 315360000
+    result = ''
+    # if we're in the base case (one line left) try to return the next time unit overloaded (e.g. 72 hours)
+    if num_lines == 1:
+        try:
+            return [timedeltaformatoverload(timedelta,num_lines)]
+        # if the overload function returned error, then we just use the biggest delta we can find
+        except ValueError:
+            pass
+    # calculate total number of months remaining
+    months = 0
+    # add months until we would pass the specified time delta by adding one more
+    while addmonths(datetime.datetime.now(), months + 1) - datetime.datetime.now() < timedelta:
+        months += 1
+    # if the result is more than 12 months
+    if months >= 12:
+        # add the number of years, using integer division by 12
+        result = str(months // 12) + 'y'
+        # if there's extra space int he result, pad it with a space
+        if len(result) == 2: result += ' '
+        # subtract the even number of years from the remaining time (using the addmonths function and time subtraction)
+        remainingtimedelta = timedelta - (addmonths(datetime.datetime.now(),(months // 12) * 12) - datetime.datetime.now())
+    # or if we have more than a month but less than a year
+    elif months > 0:
+        # just add the number of months
+        result = str(months)
+        # pad with different strings depending on the length -- e.g. return '10M' or '9mo'
+        if len(result) == 1:
+            result += 'mo'
+        else:
+            result += 'M'
+        # subtract the number of months we added from the remaining time delta to be parsed
+        remainingtimedelta = timedelta - (addmonths(datetime.datetime.now(), months) - datetime.datetime.now())
+    # if we have less than a month to go, this is easy peasy.  All these time formats are normal.  Use the formula from
+    # before.
+    elif timedelta.total_seconds() > 1:
+        # initialize divisors
+        divisors = [[604800, 'wk'], [86400, 'd'], [3600, 'h'], [60, 'm'], [1, 's']]
+        for i in range(5):
+            # check if this divisor fits
+            if timedelta.total_seconds() // divisors[i][0] > 0:
+                # if yes, put that in the result and pad if necessary
+                result = str(int(timedelta.total_seconds()) // divisors[i][0]) + divisors[i][1]
+                if len(result) == 2: result += ' '
+                # update remaining time delta and break out of the loop
+                remainingtimedelta = datetime.timedelta(seconds = timedelta.total_seconds() % divisors[i][0])
+                break
+    # if we've gotten this far, the time delta is less than one second.  just return blank
+    else:
+        result = ['   ']
+
+    if num_lines == 1:
+        return [result]
+    else:
+        return [result] + improvedtimedeltaformat(remainingtimedelta,num_lines - 1)
+
+def timedeltaformatoverload(timedelta, num_lines = 2):
+    """
+    This function ignores the largest possible divisor, and tries to overload the next-largest possible divisor.
+
+    Max input time delta is 9.999 years.  If this is exceeded, return error.
+    :param timedelta: A timedelta formatted as per python datetime module
+    :param num_lines: integer number of lines, max 2
+    :return: a list 3-character strings of length num_lines representing the time span in text
+    """
+
+
+    # calculate total number of months remaining
+    months = 0
+    # add months until we would pass the specified time delta by adding one more
+    while addmonths(datetime.datetime.now(), months + 1) - datetime.datetime.now() < timedelta:
+        months += 1
+    # if the result is more than 12 months
+    if months >= 12:
+        # just add the number of months
+        result = str(months)
+        # check if the result is longer than 2 characters - if so, raise ValueError
+        if len(result) > 2:
+            raise ValueError
+        # if the number of months fits, return it
+        else:
+            result += 'M'
+            return result
+    # or if we have more than a month but less than a year
+    elif months > 0:
+        # initialize divisors
+        divisors = [[604800, 'wk'], [86400, 'd'], [3600, 'h'], [60, 'm'], [1, 's']]
+        for i in range(5):
+            # check if this divisor fits
+            if timedelta.total_seconds() // divisors[i][0] > 0:
+                # if this divisor fits, create a result for it
+                result = str(timedelta.total_seconds() // divisors[i][0]) + divisors[i][1]
+                # if that result is too long, raise an error
+                if len(result) > 3:
+                    raise ValueError
+                # if it fits, pad with spaces if necessary and return
+                elif len(result) == 2:
+                    result += ' '
+                return result
+    # otherwise we know the time delta is less than a month
+    else:
+        # initialize divisors and foundfirst variable
+        divisors = [[604800, 'wk'], [86400, 'd'], [3600, 'h'], [60, 'm'], [1, 's']]
+        foundfirst = False
+        for i in range(5):
+            # check if this divisor fits
+            if timedelta.total_seconds() // divisors[i][0] > 0:
+                # if we still haven't found the first divisor that fits, then we've now found it.  update foundfirst
+                if not foundfirst:
+                    foundfirst = True
+                else:
+                    # if we had already found a divisor that works
+                    result = str(int(timedelta.total_seconds()) // divisors[i][0]) + divisors[i][1]
+                    if len(result) > 3:
+                        raise ValueError
+                    elif len(result) == 2:
+                        result += ' '
+                    # update remaining time delta and break out of the loop
+                    return result
+
+    # if we've finished all the loops, then we have less than a second left over.  raise ValueError to send this through
+    # the normal loop
+    raise ValueError
+
+
+def addmonths(indate,months):
+    """
+    This function takes in a datetime object and adds a number of months to that date, under the colloquial thinking
+    that "X month later" refers to the same day of the month, X months from now.  This is obviously an inconsistent
+    number of days, but that's how conversation usually runs.
+    :param indate: datetime or date object the months should be added to
+    :param months: number of months to be added
+    :return: a datetime object representing the same date the specified number of months later
+    """
+
+    assert isinstance(indate,datetime.datetime) or isinstance(indate,datetime.date), "Input date must be from datetime"
+    assert type(months) == int, "Months must be int."
+    indate = datetime.datetime.combine(indate,datetime.time.min)
+    year = indate.year + (indate.month + months - 1) // 12
+    month = (indate.month + months) - ((indate.month + months - 1) // 12) * 12
+    return indate.replace(year = year, month = month)
+
 
 def parseRTATimeDelta(timespanstring):
     """
@@ -200,6 +357,8 @@ def parseRTATimeDelta(timespanstring):
     if "hr" in timespanstring:
         lstSpanString = timespanstring.split()
         return datetime.timedelta(hours=int(lstSpanString[0]),minutes=int(lstSpanString[2]))
+    elif "Arriving" in timespanstring:
+        return datetime.timedelta(seconds=30)
     else:
         return datetime.timedelta(minutes=int(timespanstring.replace(" min","")))
 
@@ -308,7 +467,7 @@ class DateMessage(Message):
         self.text = []
         nextdate = self.nextdate()
         timedelta = nextdate - datetime.datetime.now()
-        formattedtimedelta = timedeltaformat(timedelta, min(num_lines, 2))
+        formattedtimedelta = improvedtimedeltaformat(timedelta, min(num_lines, 2))
 
         # if there are more lines than the timedelta function allows, pad the returned list with blanks
         if num_lines > 2:
@@ -417,12 +576,12 @@ class TransitMessageURL(Message):
 
             bus = []
             time = []
-            bus.append(soup.find(id="bus1").string.strip())
-            time.append(soup.find(id="ts1").string.strip())
-            bus.append(soup.find(id="bus2").string.strip())
-            time.append(soup.find(id="ts2").string.strip())
-            bus.append(soup.find(id="bus3").string.strip())
-            time.append(soup.find(id="ts3").string.strip())
+            bus.append(soup.find(id="bus1").text.strip())
+            time.append(soup.find(id="ts1").text.strip())
+            bus.append(soup.find(id="bus2").text.strip())
+            time.append(soup.find(id="ts2").text.strip())
+            bus.append(soup.find(id="bus3").text.strip())
+            time.append(soup.find(id="ts3").text.strip())
         except urllib.error.URLError:
             raise IOError("No Internet Connection.")
 
@@ -437,12 +596,14 @@ class TransitMessageURL(Message):
                 # for all of the 3 returns (RTA will only send back info about the first 3 buses)
                 try:
                     timedelta = parseRTATimeDelta(time[i])
-                    time[i] = timedeltaformat(timedelta,1)[0]
+                    time[i] = improvedtimedeltaformat(timedelta,1)[0]
                 except ValueError:
                 # if we get a ValueError, that means we've tried to pass some text to the timedelta function
                 # that means that there's no bus at this position, so fill with a dash
                     bus[i] = " - "
                     time[i] = " - "
+                except IndexError:
+                    print("Caught index error")
 
         # get the friendly name into the right length and number of lines
         friendlyname = parselines(self.friendlyname, num_lines=num_lines, num_chars=num_chars-8, padding=1)
