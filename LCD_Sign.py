@@ -12,7 +12,7 @@ especially the events to add, will be difficult to allow the user to send.
 
 from MessageClasses import *
 from DisplayClasses import *
-from googleapiclient import errors
+import googleapiclient.errors
 import copy
 import random
 import time
@@ -34,11 +34,11 @@ def GetGoogleSheetData(sheetID,credentials,lstCalendars,lstTemporaryMessages):
             # if successful, then update TryAgain to get out of the loop
             result = SHEETS.spreadsheets().values().get(spreadsheetId=sheetID,range="Messages!A:C").execute()
             TryAgain = False
-        except googleapiclient.errors.Httperror:
+        except googleapiclient.errors.HttpError:
             numtimes += 1
             if numtimes == 4:
                 # if we've done this 4 times, raise an IOError to be caught by the calling function
-                raise IOError
+                raise ValueError
             # wait before trying again
             time.sleep(int(random.random()*(2^numtimes - 1)))
 
@@ -75,6 +75,8 @@ while True:
     except IOError:
         # if the internet is down, do nothing
         pass
+    except ValueError:
+        lstTemporaryMessages.append(BasicTextMessage("No Google Service"))
 
     # for each calendar in the list of google calendars we want to display
     # if the internet connection check earlier was unsuccessful, then this will be an empty list and the whole block
