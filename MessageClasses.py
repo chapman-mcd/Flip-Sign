@@ -209,7 +209,7 @@ def improvedtimedeltaformat(timedelta, num_lines = 2):
     # if we're in the base case (one line left) try to return the next time unit overloaded (e.g. 72 hours)
     if num_lines == 1:
         try:
-            return [timedeltaformatoverload(timedelta,num_lines)]
+            return [timedeltaformatoverload(timedelta)]
         # if the overload function returned error, then we just use the biggest delta we can find
         except ValueError:
             pass
@@ -253,14 +253,14 @@ def improvedtimedeltaformat(timedelta, num_lines = 2):
                 break
     # if we've gotten this far, the time delta is less than one second.  just return blank
     else:
-        result = ['   ']
+        result = '   '
 
     if num_lines == 1:
         return [result]
     else:
         return [result] + improvedtimedeltaformat(remainingtimedelta,num_lines - 1)
 
-def timedeltaformatoverload(timedelta, num_lines = 2):
+def timedeltaformatoverload(timedelta):
     """
     This function ignores the largest possible divisor, and tries to overload the next-largest possible divisor.
 
@@ -476,6 +476,7 @@ class DateMessage(Message):
                                    num_chars=num_chars-4, padding=1)
         for i in range(num_lines):
             self.text.append(formattedtext[i]+formattedtimedelta[i])
+
 
 
 class SpecificDateMessage(DateMessage):
