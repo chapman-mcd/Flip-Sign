@@ -52,6 +52,7 @@ def GetGoogleSheetData(sheetID,credentials,lstCalendars,lstTemporaryMessages):
             lstTemporaryMessages.append(BasicTextMessage(message[1]))
 
 Display = SerialLCDDisplay(num_lines=2,num_chars=16,device='/dev/cu.usbmodemFD131',frequency=9600,reactiontime=2)
+# Display = SerialLCDDisplay(num_lines=2,num_chars=16,device='/dev/ttyACM0',frequency=9600,reactiontime=4)
 
 # set up list of transit messages - since this is static, it is done outside the loop
 lstTransitMessages = []
@@ -72,10 +73,13 @@ while True:
         check = []
         GetGoogleSheetData("1cmbeXA6WeWJBWl9ge8S-LAuX0zvPBPBpIO1iRZngz8g",get_credentials(),lstCalendars,check)
         lstTemporaryMessages = check
+        print("Pulled google sheet data")
     except IOError:
         # if the internet is down, do nothing
+        print("Found no internet connection when pulling google sheet data.")
         pass
     except ValueError:
+        print("No google service when opening google sheet.")
         lstTemporaryMessages.append(BasicTextMessage("No Google Service"))
 
     # for each calendar in the list of google calendars we want to display
@@ -86,8 +90,10 @@ while True:
         temp = []
         try:
             temp = cal.create_messages(5)
+            print("Created messages from google calendar.")
         except IOError:
             pass
+            print("No internet connection when pulling from google calendar.")
         # for each message we got back from GCal, add that to the list of temporary messages
         for message in temp:
             lstTemporaryMessages.append(message)
@@ -106,11 +112,12 @@ while True:
             Display.update(SimpleTransition,message)
         # if we've got an internet connection problem, tell the user about it
         except IOError:
-            Display.update(BasicTextMessage("Check Internet"))
+            Display.update(SimpleTransition,BasicTextMessage("Check Internet"))
         except ValueError:
             # if it's a one time specific date message, then valueerror means the date is passed
             # if it's not a one-time specific date message, then this is a real error
             if isinstance(message,OneTimeSpecificDateMessage):
+                print("Had a case where a one-time specific date message was in the past.")
                 pass
             else:
                 raise ValueError

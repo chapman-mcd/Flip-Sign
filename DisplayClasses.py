@@ -57,6 +57,7 @@ class SerialLCDDisplay(Display):
         ser = serial.Serial(self.device,self.frequency)
         time.sleep(self.reactiontime)
         states = self.determine_transition(transitionfunction, messageobject)
+        print("Attempting to display ",messageobject)
         for i in range(len(states)):
             output = ""
             for z in range(self.num_lines):
