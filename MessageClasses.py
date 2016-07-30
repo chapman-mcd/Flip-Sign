@@ -333,7 +333,9 @@ def addmonths(indate,months):
     """
     This function takes in a datetime object and adds a number of months to that date, under the colloquial thinking
     that "X month later" refers to the same day of the month, X months from now.  This is obviously an inconsistent
-    number of days, but that's how conversation usually runs.
+    number of days, but that's how conversation usually runs.  Not all months have every day (e.g. no February 30th).
+    For the purposes of this function, 1 month after January 30th returns the last day of February (same treatment
+    applied to months with only 30 days)
     :param indate: datetime or date object the months should be added to
     :param months: number of months to be added
     :return: a datetime object representing the same date the specified number of months later
@@ -344,7 +346,17 @@ def addmonths(indate,months):
     indate = datetime.datetime.combine(indate,datetime.time.min)
     year = indate.year + (indate.month + months - 1) // 12
     month = (indate.month + months) - ((indate.month + months - 1) // 12) * 12
-    return indate.replace(year = year, month = month)
+    # need to account for the fact that not all months have a 29th,30th and 31st.
+    day = indate.day
+    i = 0
+    result = ""
+    # decrease result by one day until it first in the month
+    while result == "":
+        try:
+            result = indate.replace(year=year, month=month, day = day - i)
+        except ValueError:
+            i += 1
+    return result
 
 
 def parseRTATimeDelta(timespanstring):
