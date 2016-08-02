@@ -11,7 +11,6 @@ import httplib2
 import os
 
 from apiclient import discovery
-from apiclient import errors
 import oauth2client
 from oauth2client import client
 from oauth2client import tools
@@ -27,6 +26,7 @@ except ImportError:
 SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Sign Project'
+
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -74,6 +74,7 @@ class GoogleCalendar(object):
     def __init__(self,calID,credentials):
         self.credentials = credentials
         self.calID = calID
+
     def create_messages(self,num_events):
         # Authorize credentials and build google calendar object
         http = self.credentials.authorize(httplib2.Http())
@@ -100,8 +101,11 @@ class GoogleCalendar(object):
         while eventsRequest is not None:
             # eventsResult is a dictionary
             # eventsResult['items'] is a list of dictionaries, each dictionary represents an event
-            eventsResult = eventsRequest.execute()
-            events = eventsResult.get('items', [])
+            try:
+                eventsResult = eventsRequest.execute()
+                events = eventsResult.get('items', [])
+            except httplib2.ServerNotFoundError:
+                raise IOError("No internet connection")
             # check events on this page of results
             for event in events:
                 # if the event has been colored red, then we want to create an event for it
@@ -131,7 +135,10 @@ class GoogleCalendar(object):
                     if len(result) == num_events:
                         return result
             # get ready to request the next page of results from google calendar
-            eventsRequest = service.events().list_next(eventsRequest,eventsResult)
+            try:
+                eventsRequest = service.events().list_next(eventsRequest,eventsResult)
+            except httplib2.ServerNotFoundError:
+                raise IOError("No Internet Connection")
 
         # If we've made it to this point, we've gotten to the end of the calendar before reaching num_events
         # In this case, just return the current list.
