@@ -48,11 +48,11 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
 
     for processmessage in result['values']:
         if processmessage[0] == "GCal":
-            lstCalendars.append(GoogleCalendar(message[1], credentials))
+            lstCalendars.append(GoogleCalendar(processmessage[1], credentials))
         elif processmessage[0] == "SpecificDateMessage":
-            lstTemporaryMessages.append(SpecificDateMessage(message[1], parse(message[2])))
+            lstTemporaryMessages.append(SpecificDateMessage(processmessage[1], parse(message[2])))
         elif processmessage[0] == "BasicTextMessage":
-            lstTemporaryMessages.append(BasicTextMessage(message[1]))
+            lstTemporaryMessages.append(BasicTextMessage(processmessage[1]))
 
 Display = SerialLCDDisplay(num_lines=2, num_chars=16, device='/dev/cu.usbmodemFD131', frequency=9600, reactiontime=2)
 # Display = SerialLCDDisplay(num_lines=2,num_chars=16,device='/dev/ttyACM0',frequency=9600,reactiontime=4)
