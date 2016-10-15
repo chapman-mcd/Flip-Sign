@@ -497,7 +497,6 @@ class DateMessage(Message):
             self.text.append(formattedtext[i]+formattedtimedelta[i])
 
 
-
 class SpecificDateMessage(DateMessage):
     """
     A SpecificDateMessage is a subclass of Message that occurs on the same date each year.

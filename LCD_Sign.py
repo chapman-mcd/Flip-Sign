@@ -50,7 +50,7 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
         if processmessage[0] == "GCal":
             lstCalendars.append(GoogleCalendar(processmessage[1], credentials))
         elif processmessage[0] == "SpecificDateMessage":
-            lstTemporaryMessages.append(SpecificDateMessage(processmessage[1], parse(message[2])))
+            lstTemporaryMessages.append(SpecificDateMessage(processmessage[1], parse(processmessage[2])))
         elif processmessage[0] == "BasicTextMessage":
             lstTemporaryMessages.append(BasicTextMessage(processmessage[1]))
 
