@@ -123,8 +123,9 @@ class FlipDotDisplay(Display):
         self.emptystate = copy.deepcopy(display)
 
         # initialize current state to all black and then set the display to it
-        self.currentstate = [[0]*self.columns for i in range(self.rows)]
+        self.currentstate = Image.new('1',(self.columns,self.rows),0)
         self.show(self.currentstate)
+        self.currentmessage = None
 
     def flip_invert(self):
         """
@@ -143,12 +144,15 @@ class FlipDotDisplay(Display):
     def show(self, desiredstate):
         """
         Writes the desired state to the display.
-        :param desiredstate: a list of lists, of dimensions (rows,columns)
+        :param desiredstate: a PIL image object, of dimensions (rows,columns)
         :return: None
         """
         # to optimize time, only going to check if the first row has the proper number of columns
-        assert len(desiredstate) == self.rows
-        assert len(desiredstate[0]) == self.columns
+        assert (self.columns, self.rows) = desiredstate.size
+
+        # turn desiredstate into a list of lists, with desiredstate[row][column] returning the pixel direction
+        pixel = list(desiredstate.getdata())
+        pixels = [pixel[i * self.columns : (i + 1) * self.columns] for i in range(self.rows)]
         # start with generic command strings
         head = b'\x80'
         tail = b'x8F'
@@ -157,17 +161,17 @@ class FlipDotDisplay(Display):
         cmdstring = b''
 
         display = copy.deepcopy(self.emptystate)
-        # first need to use self.layout to turn the desiredstate into the display IDs and byte values
+        # first need to use self.layout to turn the pixels array into the display IDs and byte values
         # iterate through all the rows and columns in the desired state
-        for row in range(len(desiredstate)):
-            for column in range(len(desiredstate(row))):
+        for row in range(len(pixels)):
+            for column in range(len(pixels[row])):
                 # if display is inverted, turn 1 into 0 and vice versa, otherwise leave as is
                 if self.invert:
-                    pixel = 1 - desiredstate[row][column]
+                    pixel = 1 - pixels[row][column]
                 else:
-                    pixel = desiredstate[row][column]
+                    pixel = pixels[row][column]
 
-                # display[displaynum from layout] [ bytenum from layout] incremented by the desiredstate value * power
+                # display[displaynum from layout] [ bytenum from layout] incremented by the pixels value * power
                 # of 2 from layout
                 display[self.layout[row][column][0]][self.layout[row][column][1]] +=\
                     pixel * 2 ** self.layout[row][column][2]
@@ -191,7 +195,10 @@ class FlipDotDisplay(Display):
         assert isinstance(displayobject, Message) or isinstance(displayobject, Image.Image)
         if isinstance(displayobject, Message):
             assert isinstance(font, ImageFont.FreeTypeFont)
-            assert callable(transitionfunction)
+        assert callable(transitionfunction)
+        assert transitionfunction.is_message_transition or transitionfunction.is_display_transition
+
+        displaystates = []
 
         # if an image
         if isinstance(displayobject, Image.Image):
@@ -200,12 +207,12 @@ class FlipDotDisplay(Display):
             if displayobject.size[0] > self.columns or displayobject.size[1] > self.rows:
                 horizontalcrop = max(displayobject.size[0] - self.columns, 0)
                 verticalcrop = max(displayobject.size[1] - self.rows, 0)
-                displayobject = displayobject.crop((0 + horizontalcrop // 2, 0 + verticalcrop // 2,
+                image_for_transition = displayobject.crop((0 + horizontalcrop // 2, 0 + verticalcrop // 2,
                                                     displayobject.size[0] - horizontalcrop // 2 - horizontalcrop % 2,
                                                     displayobject.size[1] - verticalcrop // 2 - verticalcrop % 2))
             # now that any cropping has been done, need to check if the image needs to be padded
-            if displayobject.size[0] < self.columns or displayobject.size[1] < self.rows:
-                displayobject = PadImage(displayobject, self.rows, self.columns, fill=0)
+            if image_for_transition.size[0] < self.columns or displayobject.size[1] < self.rows:
+                image_for_transition = pad_image(displayobject, self.rows, self.columns, fill=0)
 
         # if a message, we need to figure some things
         elif isinstance(displayobject,Message):
@@ -218,26 +225,82 @@ class FlipDotDisplay(Display):
             if display_height_chars < 1 or display_width_chars < 1:
                 raise ValueError("My font is too big!  My font is TOO BIG!")
 
-            # while checkingmessagesize
+            # set foundissue to true to ensure we check at least once
+            foundissue = True
+            # purpose of this loop is to check ensure we get a message that fits in the display
+            # the initial estimate of the number of characters is a guess - because some fonts do not have the same
+            # width for each character, the actual size taken up can depend on the message
+            # so, we check if the message fits.  if it doesn't, we honor the font size provided and reduce the amount
+            # of space available for the message
+            while foundissue:
                 # tell the message to update with the estimated number of characters
+                displayobject.update(num_lines=display_height_chars, num_chars=display_width_chars)
+                totalheight = 0
+                maxwidth = 0
+                foundissue = False
+                # determine max dimensions of the image
+                for line in displayobject.get_message():
+                    width, height = font.getsize(line)
+                    totalheight += height
+                    maxwidth = max(maxwidth, width)
+                # check against maximum display dimensions and update the "message size" if necessary
+                if maxwidth > self.columns:
+                    foundissue = True
+                    display_width_chars = int(display_width_chars * self.columns / maxwidth)
+                if totalheight > self.rows:
+                    foundissue = True
+                    display_height_chars = int(display_height_chars * self.rows / totalheight)
+            # at the end of the loop, totalheight and maxwidth should contain the actual values for the message
 
-                # turn the message into an image object with the font and font size
+            # if the provided transition function is messagetransition, apply it here to generate a message states list
+            # then turn those message states into display states
+            # otherwise, create a single-item list that is just the eventual message
+            if transitionfunction.is_message_transition:
+                # try to use transition function - if we get an assertion error, that means the current display state
+                # is an image, so a message transition is not possible
+                try:
+                    messagestates = transitionfunction(self.currentmessage,displayobject.get_message())
+                except AssertionError:
+                    messagestates = [displayobject.get_message()]
+                # since our function is a message function, we create the displaystates list here
+                for messagestate in messagestates:
+                    image = message_to_image(messagestate, self.columns, self.rows, maxwidth, totalheight,
+                                             font, display_height_chars)
+                    displaystates.append(image)
+            # since our function is not a message function, we just make the message into an image for transition
+            else:
+                image_for_transition = message_to_image(displayobject.get_message(), self.columns, self.rows, maxwidth,
+                                                        totalheight, font, display_height_chars)
+            # write the message output to the self.currentmessage container, so future message transitions can work
+            self.currentmessage = displayobject.get_message()
 
-                # check against actual dimensions
-                    # if smaller, pad the top and sides to center it
+        else: # it's not a message or an image - technically this should not be possible because of the asserts
+            raise AssertionError("Assertion not working")
 
-                    # if bigger re-estimate number of characters and loop
+        # if the provided transition function is a displaytransition, then use the transition function to generate
+        # desired display states
+        if transitionfunction.is_display_transition:
+            displaystates = transitionfunction(self.currentstate, image_for_transition)
 
-            # if the provided transition function is a messagetransition, apply it here.  otherwise, apply it later
-
-            # convert all message states into display states
-
-        # if the provided transition function is not a messagetransition, apply it to the desired state and display
-
+        # if we get this far and displaystates is still an empty list, then
+        # we got an image to display, but combined with a message transition.  just use simpletransition
+        if displaystates == []:
+            displaystates = SimpleTransition(self.currentstate, image_for_transition)
 
 
+        # show the desired states on the display
+        for state in displaystates:
+            self.show(state)
 
-def PadImage(Image,rows,columns,fill=0):
+class FakeFlipDotDisplay(FlipDotDisplay):
+    def __init__(self):
+        FlipDotDisplay.__init__(self,rows,columns,serial, layout)
+
+    def show(self,desiredstate):
+        desiredstate.format = 'PNG'
+        desiredstate.show()
+
+def pad_image(Image,rows,columns,fill=0):
     """
     Takes in an image file, returns a padded image to fit the rectangle given by the rows and columns dimensions
     :param Image: A PIL image object
@@ -264,10 +327,9 @@ def SimpleTransition(current_state,desired_state):
     :param desired_state: the desired display state
     :return: in this case, just a single-element list containing the desired state
     """
-    @messagetransition
     return [desired_state]
 
-SimpleTransition.is_message_transition = True
+SimpleTransition.is_display_transition = True
 
 def FlashStarsTransition(current_state,desired_state):
     """
@@ -276,9 +338,46 @@ def FlashStarsTransition(current_state,desired_state):
     :param desired_state: the desired display state
     :return: a list containing the display states to be passed through
     """
-    @messagetransition
+    assert type(current_state) == list
     num_lines = len(current_state)
     num_chars = len(current_state[0])
     return [['*'*num_chars]*num_lines, [' '*num_chars]*num_lines, ['*'*num_chars]*num_lines, desired_state]
 
 FlashStarsTransition.is_message_transition = True
+
+def initialize_row_spacing_lookup():
+    """
+    Could not determine an algorithm for how to space the lines, so going to use a lookup table.
+    lookuptable[num_lines][extra_spaces] will contain a tuple (top,per_line) which indicates how many spaces go
+    at the top and how many go between each line.
+    :return: a lookup table, which is a list of lists of tuples.
+    """
+    output = [[None]*7 for i in range(5)]
+    output[3][0] = (0, 0)
+    output[3][1] = (0, 0)
+    output[3][2] = (0, 1)
+    output[3][3] = (0, 1)
+    output[3][4] = (1, 1)
+    output[3][5] = (1, 1)
+    output[2][0] = (0, 0)
+    output[2][1] = (0, 1)
+    output[2][2] = (0, 1)
+    output[2][3] = (1, 1)
+    output[2][4] = (1, 2)
+    output[2][5] = (1, 5)
+    return output
+
+def message_to_image(message,columns,rows,max_width,total_height, font, display_height_chars):
+    image = Image.new('1', (columns, rows), 0)
+    # calculate x position to write the lines to - this is easy since it's just centering the stuff
+    xposition = (columns - max_width) // 2
+    # calculate y position and spacing - more difficult since there are multiple lines and spacing between
+    total_y_space = rows - total_height
+    yposition, per_line = initialize_row_spacing_lookup()[display_height_chars][total_y_space]
+    line_height = font.getsize('A')[1]
+    # iterate through the lines in the message, writing each line at the right position and then
+    # incrementing the position
+    for i in range(len(message)):
+        ImageDraw.Draw(image).text((xposition, yposition), message[i], fill=1, font=font)
+        yposition += line_height + per_line
+    return image
