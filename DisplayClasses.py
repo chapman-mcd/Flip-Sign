@@ -3,7 +3,9 @@ from PIL import ImageFont
 from PIL import ImageDraw
 import copy
 import struct
-import MessageClasses
+import serial
+from MessageClasses import *
+
 
 
 class Display(object):
@@ -81,26 +83,24 @@ class FlipDotDisplay(Display):
     """
     This class represents a rectangular array of flip dot displays from AlfaZeta, arranged in an arbitrary layout.
     """
-    def __init__(self, rows, columns, serial, layout):
+    def __init__(self, rows, columns, serialinterface, layout):
         """
         Initializes the display.
         :param rows: Integer number of rows in the display
         :param columns: Integer number of columns in the display
-        :param layout: A tuple of tuples of tuples, representing how to turn an array of size (rows,columns) into
-        instructions for the display.  layout[rownum][colnum] should return a tuple (displayID,bytenum,powerof2)
-        :param serial: A python serial module object, representing the serial interface of the actual display
+        :param layout: A dictionary, with keys being (row,column) tuples.  layout[(row,column)]
+                        should return a tuple (displayID,bytenum,powerof2)
+        :param serialinterface: A python serial module object, representing the serial interface of the actual display
         """
         # Make sure variables are of the right type.  For layout, only make sure it has the right dimensions
         assert type(rows) == int
         assert type(columns) == int
-        assert isinstance(serial, serial.serial)
-        assert len(layout) == rows
-        for i in range(len(layout)):
-            assert len(layout[i]) == columns
+        assert isinstance(serialinterface, serial.Serial)
+
         self.rows = rows
         self.columns = columns
-        self.layout = layout
-        self.serial = serial
+        self.layout = copy.deepcopy(layout)
+        self.serial = serialinterface
         self.invert = False
 
         # determine indices of displays and number of bytes
@@ -108,13 +108,12 @@ class FlipDotDisplay(Display):
         # each element of the dictionary is an integer (number of bytes)
         # this loop determines the largest bytenum for each display
         display = {}
-        for row in layout:
-            for column in row:
-                if column[0] in display:
-                    if column[1] > display[column[0]]:
-                        display[column[0]] = column[1]
-                else:
-                    display[column[0]] = column[1]
+        for pixel in layout:
+            if layout[pixel][0] in display:
+                if layout[pixel][1] > display[layout[pixel][0]]:
+                    display[layout[pixel][0]] = layout[pixel][1]
+            else:
+                display[layout[pixel][0]] = layout[pixel][1]
         # turn the display dictionary into a dictionary of lists, each list the length of the bytes in the display
         # default empty state is 0 (all pixels in column black)
         for disp in display:
@@ -148,7 +147,7 @@ class FlipDotDisplay(Display):
         :return: None
         """
         # to optimize time, only going to check if the first row has the proper number of columns
-        assert (self.columns, self.rows) = desiredstate.size
+        assert (self.columns, self.rows) == desiredstate.size
 
         # turn desiredstate into a list of lists, with desiredstate[row][column] returning the pixel direction
         pixel = list(desiredstate.getdata())
@@ -173,8 +172,8 @@ class FlipDotDisplay(Display):
 
                 # display[displaynum from layout] [ bytenum from layout] incremented by the pixels value * power
                 # of 2 from layout
-                display[self.layout[row][column][0]][self.layout[row][column][1]] +=\
-                    pixel * 2 ** self.layout[row][column][2]
+                display[self.layout[(row, column)][0]][self.layout[(row, column)][1]] +=\
+                    pixel * 2 ** self.layout[(row, column)][2]
 
         # iterate through the displays and turn them into the proper byte arrays
         for disp in display:
@@ -190,7 +189,7 @@ class FlipDotDisplay(Display):
         # write the command to the serial interface
         self.serial.write(cmdstring)
 
-    def update(self, displayobject, transitionfunction, font='nofont'):
+    def update(self, transitionfunction, displayobject, font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf', size=9)):
         # Ensure proper types
         assert isinstance(displayobject, Message) or isinstance(displayobject, Image.Image)
         if isinstance(displayobject, Message):
@@ -293,12 +292,16 @@ class FlipDotDisplay(Display):
             self.show(state)
 
 class FakeFlipDotDisplay(FlipDotDisplay):
-    def __init__(self):
-        FlipDotDisplay.__init__(self,rows,columns,serial, layout)
+    def __init__(self, rows, columns, serialinterface, layout):
+        self.file_number = 1
+        FlipDotDisplay.__init__(self, rows, columns, serialinterface, layout)
+
 
     def show(self,desiredstate):
         desiredstate.format = 'PNG'
-        desiredstate.show()
+        statepath = '/Users/cmcd/PycharmProjects/SignStorage/'
+        desiredstate.save(statepath + str(self.file_number) + '.PNG',format='PNG')
+        self.file_number += 1
 
 def pad_image(Image,rows,columns,fill=0):
     """
@@ -327,9 +330,10 @@ def SimpleTransition(current_state,desired_state):
     :param desired_state: the desired display state
     :return: in this case, just a single-element list containing the desired state
     """
+    SimpleTransition.is_display_transition = True
+    SimpleTransition.is_message_transition = False
     return [desired_state]
 
-SimpleTransition.is_display_transition = True
 
 def FlashStarsTransition(current_state,desired_state):
     """
@@ -339,11 +343,13 @@ def FlashStarsTransition(current_state,desired_state):
     :return: a list containing the display states to be passed through
     """
     assert type(current_state) == list
+    FlashStarsTransition.is_message_transition = True
+    FlashStarsTransition.is_display_transition = False
     num_lines = len(current_state)
     num_chars = len(current_state[0])
     return [['*'*num_chars]*num_lines, [' '*num_chars]*num_lines, ['*'*num_chars]*num_lines, desired_state]
 
-FlashStarsTransition.is_message_transition = True
+
 
 def initialize_row_spacing_lookup():
     """
@@ -364,7 +370,7 @@ def initialize_row_spacing_lookup():
     output[2][2] = (0, 1)
     output[2][3] = (1, 1)
     output[2][4] = (1, 2)
-    output[2][5] = (1, 5)
+    output[2][5] = (1, 2)
     return output
 
 def message_to_image(message,columns,rows,max_width,total_height, font, display_height_chars):
