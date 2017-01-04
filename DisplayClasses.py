@@ -1,6 +1,7 @@
 from PIL import Image
 from PIL import ImageFont
 from PIL import ImageDraw
+from TransitionFunctions import *
 import copy
 import struct
 import serial
@@ -118,7 +119,7 @@ class FlipDotDisplay(Display):
         # default empty state is 0 (all pixels in column black)
         for disp in display:
             temp = display[disp]
-            display[disp] = [0]*temp
+            display[disp] = [0]*(temp + 1)
         self.emptystate = copy.deepcopy(display)
 
         # initialize current state to all black and then set the display to it
@@ -154,9 +155,9 @@ class FlipDotDisplay(Display):
         pixels = [pixel[i * self.columns : (i + 1) * self.columns] for i in range(self.rows)]
         # start with generic command strings
         head = b'\x80'
-        tail = b'x8F'
-        cmd = b'x84'
-        refresh = head + b'x82' + tail
+        tail = b'\x8F'
+        cmd = b'\x84'
+        refresh = head + b'\x82' + tail
         cmdstring = b''
 
         display = copy.deepcopy(self.emptystate)
@@ -291,13 +292,14 @@ class FlipDotDisplay(Display):
         for state in displaystates:
             self.show(state)
 
+        self.currentstate = displaystates[-1]
+
 class FakeFlipDotDisplay(FlipDotDisplay):
     def __init__(self, rows, columns, serialinterface, layout):
         self.file_number = 1
         FlipDotDisplay.__init__(self, rows, columns, serialinterface, layout)
 
-
-    def show(self,desiredstate):
+    def show(self, desiredstate):
         desiredstate.format = 'PNG'
         statepath = '/Users/cmcd/PycharmProjects/SignStorage/'
         desiredstate.save(statepath + str(self.file_number) + '.PNG',format='PNG')
@@ -320,35 +322,6 @@ def pad_image(Image,rows,columns,fill=0):
     # paste provided image into created image, such that it is as centered as possible in the new area
     padded.paste(Image, ((columns - incolumns) // 2, (rows-inrows) // 2))
     return padded
-
-
-def SimpleTransition(current_state,desired_state):
-    """
-    The simplest possible transition -- go to the desired state directly with no fancy stuff.
-    :param current_state: the current display state -- ignored by this function but included for consistency with other
-    transition functions.
-    :param desired_state: the desired display state
-    :return: in this case, just a single-element list containing the desired state
-    """
-    SimpleTransition.is_display_transition = True
-    SimpleTransition.is_message_transition = False
-    return [desired_state]
-
-
-def FlashStarsTransition(current_state,desired_state):
-    """
-    This transition function flashes all asterisks, then blanks, then asterisks, then the desired message.
-    :param current_state: the current state of the display - again ignored by this function
-    :param desired_state: the desired display state
-    :return: a list containing the display states to be passed through
-    """
-    assert type(current_state) == list
-    FlashStarsTransition.is_message_transition = True
-    FlashStarsTransition.is_display_transition = False
-    num_lines = len(current_state)
-    num_chars = len(current_state[0])
-    return [['*'*num_chars]*num_lines, [' '*num_chars]*num_lines, ['*'*num_chars]*num_lines, desired_state]
-
 
 
 def initialize_row_spacing_lookup():

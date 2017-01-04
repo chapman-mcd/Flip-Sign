@@ -11,13 +11,15 @@ def Generate_Layout_1():
     #first display
     for i in range(28):
         for j in range(7):
-            output[(j, i)] = (1, i, 2**j)
+            output[(j, i)] = (1, i, j)
 
     #second display
     for i in range(28):
         for j in range(7):
-            output[(j, i+7)] = (2, i, 2**j)
+            output[(j+7, i)] = (2, i, j)
     return output
+
+z = Generate_Layout_1()
 
 port = '/dev/ttyS0'
 

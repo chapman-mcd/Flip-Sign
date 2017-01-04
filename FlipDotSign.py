@@ -59,9 +59,12 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
         elif processmessage[0] == "BasicTextMessage":
             lstTemporaryMessages.append(BasicTextMessage(processmessage[1]))
 
-z = serial.Serial('/dev/cu.usbmodemFD131',9600)
+port = '/dev/ttyS0'
 
-Display = FakeFlipDotDisplay(columns=162,rows=21, serialinterface=z, layout=Generate_Layout_2())
+serialinterface = serial.Serial(port=port, baudrate=57600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
+                                timeout=1, stopbits=serial.STOPBITS_ONE)
+
+Display = FlipDotDisplay(columns=162,rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
 
 # set up list of transit messages - since this is static, it is done outside the loop
 lstTransitMessages = []
@@ -131,4 +134,4 @@ while True:
             else:
                 raise ValueError
 
-        time.sleep(1)
+        time.sleep(5)
