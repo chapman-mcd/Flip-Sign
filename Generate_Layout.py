@@ -26,5 +26,5 @@ def Generate_Layout_2():
         for z in range(3):
             for i in range(28):
                 for j in range(7):
-                    output[(j+7*z, i+28*x)] = (z+3*x, 27-i, j)
+                    output[(j+7*z, i+28*x)] = (z+3*x, 27-i, 6-j)
     return output

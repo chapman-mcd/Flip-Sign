@@ -121,7 +121,7 @@ while True:
     # for each messages in our list to display, make the display show it then wait for 1 second before sending next
     for message in lstMessagestoDisplay:
         try:
-            Display.update(ellipse_wipe, message)
+            Display.update(ellipse_wipe, message, font=ImageFont.truetype('/home/pi/Documents/flip-sign/Gamegirl.ttf', size=12))
         # if we've got an internet connection problem, tell the user about it
         except IOError:
             Display.update(SimpleTransition, BasicTextMessage("Check Internet"))
@@ -130,6 +130,7 @@ while True:
             # if it's not a one-time specific date message, then this is a real error
             if isinstance(message, OneTimeSpecificDateMessage):
                 print("Had a case where a one-time specific date message was in the past.")
+                print(message.occasion)
                 pass
             else:
                 raise ValueError

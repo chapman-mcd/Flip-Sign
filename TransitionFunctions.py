@@ -63,7 +63,7 @@ def center_wipe(currentstate, desiredstate):
         right_column = left_column
 
     # iterate until the wipe has passed the edge
-    while left_column >= 0:
+    while left_column >= -1:
         # create a mask with the right amount of interior area transparent
         # note - Image.composite(image1, image2, mask) yields image1 where mask is 1 and image2 where mask is 0
         image_mask = Image.new('1',desiredstate.size,1)
@@ -152,6 +152,7 @@ def push_up(current_state, desired_state):
         # append output
         output.append(next)
 
+    output.append(desired_state)
     # return the output
     return output
 
