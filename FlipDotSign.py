@@ -21,8 +21,9 @@ from TransitionFunctions import *
 from Generate_Layout import *
 
 
+z = SimpleTransition('', 'z')
 
-z = SimpleTransition('','z')
+
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
     # Create google sheets object
     http = credentials.authorize(httplib2.Http())
@@ -64,16 +65,20 @@ port = '/dev/ttyS0'
 serialinterface = serial.Serial(port=port, baudrate=57600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
                                 timeout=1, stopbits=serial.STOPBITS_ONE)
 
-Display = FlipDotDisplay(columns=162,rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
+Display = FlipDotDisplay(columns=168, rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
+
+transition_functions = [SimpleTransition, dissolve_changes_only]
 
 # set up list of transit messages - since this is static, it is done outside the loop
 lstTransitMessages = []
-lstTransitMessages.append(TransitMessageURL(
-    "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=235&routecode=10123&direction=0", "Street Car"))
-lstTransitMessages.append(TransitMessageURL(
-    "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=145&routecode=10122&direction=0", "Magazine Bus"))
-lstTransitMessages.append(TransitMessageURL(
-    "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=58&routecode=10121&direction=0", "Tchoup Bus"))
+# lstTransitMessages.append(TransitMessageURL(
+#     "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=235&routecode=10123&direction=0", "Street Car"))
+# lstTransitMessages.append(TransitMessageURL(
+#     "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=145&routecode=10122&direction=0", "Magazine Bus"))
+# lstTransitMessages.append(TransitMessageURL(
+#     "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=58&routecode=10121&direction=0", "Tchoup Bus"))
+
+
 
 while True:
     # Reset list of calendars and messages to display
@@ -121,7 +126,8 @@ while True:
     # for each messages in our list to display, make the display show it then wait for 1 second before sending next
     for message in lstMessagestoDisplay:
         try:
-            Display.update(ellipse_wipe, message, font=ImageFont.truetype('/home/pi/Documents/flip-sign/Gamegirl.ttf', size=12))
+            Display.update(random.choice(transition_functions), message,
+                           font=ImageFont.truetype('/home/pi/Documents/flip-sign/PressStart2p.ttf', size=9))
         # if we've got an internet connection problem, tell the user about it
         except IOError:
             Display.update(SimpleTransition, BasicTextMessage("Check Internet"))
@@ -135,4 +141,8 @@ while True:
             else:
                 raise ValueError
 
-        time.sleep(5)
+        time.sleep(300)
+
+    serialinterface.write(reset_command())
+    time.sleep(1)
+    serialinterface.write(all_black_command())

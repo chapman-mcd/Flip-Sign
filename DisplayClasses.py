@@ -8,7 +8,6 @@ import serial
 from MessageClasses import *
 
 
-
 class Display(object):
     """
     This class represents a display -- it has properties that specify its width and number of lines.
@@ -123,7 +122,7 @@ class FlipDotDisplay(Display):
         self.emptystate = copy.deepcopy(display)
 
         # initialize current state to all black and then set the display to it
-        self.currentstate = Image.new('1',(self.columns,self.rows),0)
+        self.currentstate = Image.new('1', (self.columns, self.rows), 0)
         self.show(self.currentstate)
         self.currentmessage = None
 
@@ -152,7 +151,7 @@ class FlipDotDisplay(Display):
 
         # turn desiredstate into a list of lists, with desiredstate[row][column] returning the pixel direction
         pixel = list(desiredstate.getdata())
-        pixels = [pixel[i * self.columns : (i + 1) * self.columns] for i in range(self.rows)]
+        pixels = [pixel[i * self.columns: (i + 1) * self.columns] for i in range(self.rows)]
         # start with generic command strings
         head = b'\x80'
         tail = b'\x8F'
@@ -190,7 +189,8 @@ class FlipDotDisplay(Display):
         # write the command to the serial interface
         self.serial.write(cmdstring)
 
-    def update(self, transitionfunction, displayobject, font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf', size=9)):
+    def update(self, transitionfunction, displayobject,
+               font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf', size=9)):
         # Ensure proper types
         assert isinstance(displayobject, Message) or isinstance(displayobject, Image.Image)
         if isinstance(displayobject, Message):
@@ -204,18 +204,19 @@ class FlipDotDisplay(Display):
         if isinstance(displayobject, Image.Image):
             # either crop it to fit the display (keep top left) or pad to fill (center)
             # first check if either of the dimensions are too big
+            image_for_transition = displayobject
             if displayobject.size[0] > self.columns or displayobject.size[1] > self.rows:
                 horizontalcrop = max(displayobject.size[0] - self.columns, 0)
                 verticalcrop = max(displayobject.size[1] - self.rows, 0)
                 image_for_transition = displayobject.crop((0 + horizontalcrop // 2, 0 + verticalcrop // 2,
-                                                    displayobject.size[0] - horizontalcrop // 2 - horizontalcrop % 2,
-                                                    displayobject.size[1] - verticalcrop // 2 - verticalcrop % 2))
+                    displayobject.size[0] - horizontalcrop // 2 - horizontalcrop % 2,
+                    displayobject.size[1] - verticalcrop // 2 - verticalcrop % 2))
             # now that any cropping has been done, need to check if the image needs to be padded
             if image_for_transition.size[0] < self.columns or displayobject.size[1] < self.rows:
                 image_for_transition = pad_image(displayobject, self.rows, self.columns, fill=0)
 
         # if a message, we need to figure some things
-        elif isinstance(displayobject,Message):
+        elif isinstance(displayobject, Message):
             # check the size of the phrase "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz " to see how wide
             # and tall the display is in terms of characters with the specified font
             checkwidth, checkheight = font.getsize("ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz ")
@@ -259,7 +260,7 @@ class FlipDotDisplay(Display):
                 # try to use transition function - if we get an assertion error, that means the current display state
                 # is an image, so a message transition is not possible
                 try:
-                    messagestates = transitionfunction(self.currentmessage,displayobject.get_message())
+                    messagestates = transitionfunction(self.currentmessage, displayobject.get_message())
                 except AssertionError:
                     messagestates = [displayobject.get_message()]
                 # since our function is a message function, we create the displaystates list here
@@ -274,7 +275,7 @@ class FlipDotDisplay(Display):
             # write the message output to the self.currentmessage container, so future message transitions can work
             self.currentmessage = displayobject.get_message()
 
-        else: # it's not a message or an image - technically this should not be possible because of the asserts
+        else:  # it's not a message or an image - technically this should not be possible because of the asserts
             raise AssertionError("Assertion not working")
 
         # if the provided transition function is a displaytransition, then use the transition function to generate
@@ -294,6 +295,7 @@ class FlipDotDisplay(Display):
 
         self.currentstate = displaystates[-1]
 
+
 class FakeFlipDotDisplay(FlipDotDisplay):
     def __init__(self, rows, columns, serialinterface, layout):
         self.file_number = 1
@@ -302,10 +304,11 @@ class FakeFlipDotDisplay(FlipDotDisplay):
     def show(self, desiredstate):
         desiredstate.format = 'PNG'
         statepath = '/Users/cmcd/PycharmProjects/SignStorage/'
-        desiredstate.save(statepath + str(self.file_number) + '.PNG',format='PNG')
+        desiredstate.save(statepath + str(self.file_number) + '.PNG', format='PNG')
         self.file_number += 1
 
-def pad_image(Image,rows,columns,fill=0):
+
+def pad_image(Image, rows, columns, fill=0):
     """
     Takes in an image file, returns a padded image to fit the rectangle given by the rows and columns dimensions
     :param Image: A PIL image object
@@ -315,7 +318,7 @@ def pad_image(Image,rows,columns,fill=0):
     :return: A PIL image object of dimensions (rows,columns) with the provided image in the center
     """
     # create new image of the desired size, with the fill
-    padded = Image.new('1',(columns,rows),fill)
+    padded = Image.new('1', (columns, rows), fill)
     incolumns, inrows = Image.size
     if incolumns > columns or inrows > rows:
         raise ValueError("Input image must be less than or equal to the output size in all dimensions.")
@@ -346,7 +349,8 @@ def initialize_row_spacing_lookup():
     output[2][5] = (1, 2)
     return output
 
-def message_to_image(message,columns,rows,max_width,total_height, font, display_height_chars):
+
+def message_to_image(message, columns, rows, max_width, total_height, font, display_height_chars):
     image = Image.new('1', (columns, rows), 0)
     # calculate x position to write the lines to - this is easy since it's just centering the stuff
     xposition = (columns - max_width) // 2

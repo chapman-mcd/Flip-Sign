@@ -65,12 +65,7 @@ Display = FakeFlipDotDisplay(columns=162,rows=21, serialinterface=z, layout=Gene
 
 # set up list of transit messages - since this is static, it is done outside the loop
 lstTransitMessages = []
-lstTransitMessages.append(TransitMessageURL(
-    "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=235&routecode=10123&direction=0", "Street Car"))
-lstTransitMessages.append(TransitMessageURL(
-    "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=145&routecode=10122&direction=0", "Magazine Bus"))
-lstTransitMessages.append(TransitMessageURL(
-    "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=58&routecode=10121&direction=0", "Tchoup Bus"))
+
 
 while True:
     # Reset list of calendars and messages to display
