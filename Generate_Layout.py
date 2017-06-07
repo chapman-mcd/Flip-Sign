@@ -79,7 +79,7 @@ def reset_command():
     return result
 
 
-def all_black_command:
+def all_black_command():
     """
     Returns a command that can be sent to the display to turn all dots black
     :return: a binary string command that sets all dots black

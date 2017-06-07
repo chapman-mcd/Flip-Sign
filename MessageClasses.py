@@ -445,7 +445,7 @@ class BasicTextMessage(Message):
 
     def update(self, num_lines, num_chars):
         if type(self.message) == str:
-            self.text = parselines(self.message[:num_lines * num_chars],num_lines=num_lines,num_chars=num_chars,padding=0)
+            self.text = parselines(self.message,num_lines=num_lines,num_chars=num_chars,padding=0)
         elif type(self.message) == list:
             self.text = []
             if len(self.message) > num_lines:

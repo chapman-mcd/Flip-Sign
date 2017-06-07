@@ -189,8 +189,7 @@ class FlipDotDisplay(Display):
         # write the command to the serial interface
         self.serial.write(cmdstring)
 
-    def update(self, transitionfunction, displayobject,
-               font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf', size=9)):
+    def update(self, transitionfunction, displayobject,font):
         # Ensure proper types
         assert isinstance(displayobject, Message) or isinstance(displayobject, Image.Image)
         if isinstance(displayobject, Message):

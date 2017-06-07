@@ -19,7 +19,10 @@ import time
 import serial
 from TransitionFunctions import *
 from Generate_Layout import *
+from MessageGenerator import *
 
+fontsize = 9
+minfontsize = 3
 
 
 z = SimpleTransition('','z')
@@ -58,72 +61,88 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
             lstTemporaryMessages.append(SpecificDateMessage(processmessage[1], parse(processmessage[2])))
         elif processmessage[0] == "BasicTextMessage":
             lstTemporaryMessages.append(BasicTextMessage(processmessage[1]))
+        elif processmessage[0] == "MessageGenerator":
+            lstGeneratedMessages = Message_Generator(processmessage[1],processmessage[2]).create_messages()
+            for Generated_Message in lstGeneratedMessages:
+                lstTemporaryMessages.append(Generated_Message)
 
 z = serial.Serial('/dev/cu.usbmodemFD131',9600)
 
-Display = FakeFlipDotDisplay(columns=162,rows=21, serialinterface=z, layout=Generate_Layout_2())
+Display = FakeFlipDotDisplay(columns=168,rows=21, serialinterface=z, layout=Generate_Layout_2())
 
 # set up list of transit messages - since this is static, it is done outside the loop
 lstTransitMessages = []
 
 
-while True:
-    # Reset list of calendars and messages to display
-    lstCalendars = []
-    lstMessagestoDisplay = []
+#while True: - only run through the process once since the fake sign is mostly for testing
+# Reset list of calendars and messages to display
+lstCalendars = []
+lstMessagestoDisplay = []
+lstTemporaryMessages = []
+try:
+    # attempt to get new temporary messages and calendars from the google spreadsheet
+    # the "check" list is used so that the temporary messages list is only replaced if the internet is up
+    check = []
+    GetGoogleSheetData("1cmbeXA6WeWJBWl9ge8S-LAuX0zvPBPBpIO1iRZngz8g", get_credentials(), lstCalendars, check)
+    lstTemporaryMessages = check
+    print("Pulled google sheet data")
+except IOError:
+    # if the internet is down, do nothing
+    print("Found no internet connection when pulling google sheet data.")
+    pass
+# except ValueError:
+#     print("No google service when opening google sheet.")
+#     lstTemporaryMessages.append(BasicTextMessage("No Google Service"))
+
+# for each calendar in the list of google calendars we want to display
+# if the internet connection check earlier was unsuccessful, then this will be an empty list and the whole block
+# will be skipped
+for cal in lstCalendars:
+    # create a temporary list of messages from the google calendar routine
+    temp = []
     try:
-        # attempt to get new temporary messages and calendars from the google spreadsheet
-        # the "check" list is used so that the temporary messages list is only replaced if the internet is up
-        check = []
-        GetGoogleSheetData("1cmbeXA6WeWJBWl9ge8S-LAuX0zvPBPBpIO1iRZngz8g", get_credentials(), lstCalendars, check)
-        lstTemporaryMessages = check
-        print("Pulled google sheet data")
+        temp = cal.create_messages(5)
+        print("Created messages from google calendar.")
     except IOError:
-        # if the internet is down, do nothing
-        print("Found no internet connection when pulling google sheet data.")
         pass
+        print("No internet connection when pulling from google calendar.")
+    # for each message we got back from GCal, add that to the list of temporary messages
+    for message in temp:
+        lstTemporaryMessages.append(message)
+# if it's between 6 and 9 AM, we care a lot more about transit than anything else, add a lot more of those
+if 6 < datetime.datetime.now().hour < 9:
+    for i in range(3):
+        lstMessagestoDisplay += copy.deepcopy(lstTransitMessages)
+# build the list of messages to display
+lstMessagestoDisplay += copy.deepcopy(lstTransitMessages)
+lstMessagestoDisplay += lstTemporaryMessages
+random.shuffle(lstMessagestoDisplay)
+
+# for each messages in our list to display, make the display show it then wait for 1 second before sending next
+for message in lstMessagestoDisplay:
+    try:
+        Display.update(SimpleTransition, message,
+                       font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf', size=fontsize))
+    # if we've got an internet connection problem, tell the user about it
+    except IOError:
+        Display.update(SimpleTransition, BasicTextMessage("Check Internet"),
+                       font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf', size=fontsize))
     except ValueError:
-        print("No google service when opening google sheet.")
-        lstTemporaryMessages.append(BasicTextMessage("No Google Service"))
-
-    # for each calendar in the list of google calendars we want to display
-    # if the internet connection check earlier was unsuccessful, then this will be an empty list and the whole block
-    # will be skipped
-    for cal in lstCalendars:
-        # create a temporary list of messages from the google calendar routine
-        temp = []
-        try:
-            temp = cal.create_messages(5)
-            print("Created messages from google calendar.")
-        except IOError:
+        # if it's a one time specific date message, then valueerror means the date is passed
+        # if it's not a one-time specific date message, then this is a real error
+        if isinstance(message, OneTimeSpecificDateMessage):
+            print("Had a case where a one-time specific date message was in the past.")
             pass
-            print("No internet connection when pulling from google calendar.")
-        # for each message we got back from GCal, add that to the list of temporary messages
-        for message in temp:
-            lstTemporaryMessages.append(message)
-    # if it's between 6 and 9 AM, we care a lot more about transit than anything else, add a lot more of those
-    if 6 < datetime.datetime.now().hour < 9:
-        for i in range(3):
-            lstMessagestoDisplay += copy.deepcopy(lstTransitMessages)
-    # build the list of messages to display
-    lstMessagestoDisplay += copy.deepcopy(lstTransitMessages)
-    lstMessagestoDisplay += lstTemporaryMessages
-    random.shuffle(lstMessagestoDisplay)
+        elif isinstance(message, BasicTextMessage):
+            trysize = fontsize
+            while trysize >= minfontsize:
+                try:
+                    print("Tried font size: " + str(trysize))
+                    Display.update(SimpleTransition, message,
+                   font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf', size=trysize))
+                    break
+                except ValueError:
+                    trysize += -1
+        else:
+            raise ValueError
 
-    # for each messages in our list to display, make the display show it then wait for 1 second before sending next
-    for message in lstMessagestoDisplay:
-        try:
-            Display.update(ellipse_wipe, message)
-        # if we've got an internet connection problem, tell the user about it
-        except IOError:
-            Display.update(SimpleTransition, BasicTextMessage("Check Internet"))
-        except ValueError:
-            # if it's a one time specific date message, then valueerror means the date is passed
-            # if it's not a one-time specific date message, then this is a real error
-            if isinstance(message, OneTimeSpecificDateMessage):
-                print("Had a case where a one-time specific date message was in the past.")
-                pass
-            else:
-                raise ValueError
-
-        time.sleep(1)
