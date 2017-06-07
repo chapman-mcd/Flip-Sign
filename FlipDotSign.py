@@ -23,6 +23,9 @@ from Generate_Layout import *
 
 z = SimpleTransition('', 'z')
 
+fontsize = 9
+minfontsize = 3
+
 
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
     # Create google sheets object
@@ -59,6 +62,10 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
             lstTemporaryMessages.append(SpecificDateMessage(processmessage[1], parse(processmessage[2])))
         elif processmessage[0] == "BasicTextMessage":
             lstTemporaryMessages.append(BasicTextMessage(processmessage[1]))
+        elif processmessage[0] == "MessageGenerator":
+            lstGeneratedMessages = Message_Generator(processmessage[1],processmessage[2]).create_messages()
+            for Generated_Message in lstGeneratedMessages:
+                lstTemporaryMessages.append(Generated_Message)
 
 port = '/dev/ttyS0'
 
@@ -143,8 +150,17 @@ while True:
                 # if it's not a one-time specific date message, then this is a real error
                 if isinstance(message, OneTimeSpecificDateMessage):
                     print("Had a case where a one-time specific date message was in the past.")
-                    print(message.occasion)
                     pass
+                elif isinstance(message, BasicTextMessage):
+                    trysize = fontsize
+                    while trysize >= minfontsize:
+                        try:
+                            Display.update(SimpleTransition, message,
+                                           font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf',
+                                                                   size=trysize))
+                            break
+                        except ValueError:
+                            trysize += -1
                 else:
                     raise ValueError
 
