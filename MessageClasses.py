@@ -145,6 +145,10 @@ class GoogleCalendar(object):
         return result
 
 
+class StringTooLongError(ValueError): pass
+
+class DateMessageInPastError(ValueError): pass
+
 def MardiGrasDate():
     """
     A function to return the date of Mardi Gras in the current year.
@@ -398,7 +402,7 @@ def parselines(occasion,num_lines=2,num_chars=13,padding=1):
     # check length of occasion string and parse into two lines as best possible
     # if the overall string is too long, raise ValueError
     if len(occasion) > num_lines*num_chars:
-        raise ValueError('Occasion string too long for display')
+        raise StringTooLongError('Occasion string too long for display')
     # Otherwise parse it into lines using the textwrap function
     output = textwrap.wrap(occasion, num_chars)
     # if the output is longer than the number of lines available, we've gotta break up some words
@@ -444,6 +448,7 @@ class BasicTextMessage(Message):
         self.message = message
 
     def update(self, num_lines, num_chars):
+        print(self.message)
         if type(self.message) == str:
             self.text = parselines(self.message,num_lines=num_lines,num_chars=num_chars,padding=0)
         elif type(self.message) == list:
@@ -483,6 +488,8 @@ class DateMessage(Message):
         :param num_lines: integer indicating number of lines in the display
         :param num_chars: integer indicating number of characters in each line of the display
         """
+        # this print statement is for monitoring purposes - it relies on all subclasses having an "occasion" attribute
+        print(self.occasion)
         self.text = []
         nextdate = self.nextdate()
         timedelta = nextdate - datetime.datetime.now()
@@ -539,7 +546,7 @@ class OneTimeSpecificDateMessage(SpecificDateMessage):
             return self.date
         # if the date has passed, raise ValueError
         else:
-            raise ValueError("Specific Datemessage: " + self.occasion[0] + " has passed.")
+            raise DateMessageInPastError("Specific Datemessage: " + self.occasion[0] + " has passed.")
 
 
 class VaryingDateMessage(DateMessage):

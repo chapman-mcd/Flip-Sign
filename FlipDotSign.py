@@ -96,6 +96,7 @@ while True:
         # Reset list of calendars and messages to display
         lstCalendars = []
         lstMessagestoDisplay = []
+        lstTemporaryMessages = []
         try:
             # attempt to get new temporary messages and calendars from the google spreadsheet
             # the "check" list is used so that the temporary messages list is only replaced if the internet is up
@@ -145,24 +146,22 @@ while True:
             except IOError:
                 Display.update(SimpleTransition, BasicTextMessage("Check Internet"),
                                font=ImageFont.truetype('/home/pi/Documents/flip-sign/PressStart2P.ttf', size=9))
-            except ValueError:
+            except DateMessageInPastError:
                 # if it's a one time specific date message, then valueerror means the date is passed
                 # if it's not a one-time specific date message, then this is a real error
                 if isinstance(message, OneTimeSpecificDateMessage):
                     print("Had a case where a one-time specific date message was in the past.")
                     pass
-                elif isinstance(message, BasicTextMessage):
-                    trysize = fontsize
-                    while trysize >= minfontsize:
-                        try:
-                            Display.update(SimpleTransition, message,
-                                           font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf',
-                                                                   size=trysize))
-                            break
-                        except ValueError:
-                            trysize += -1
-                else:
-                    raise ValueError
+            except StringTooLongError:
+                trysize = fontsize
+                while trysize >= minfontsize:
+                    try:
+                        Display.update(SimpleTransition, message,
+                                       font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf',
+                                                               size=trysize))
+                        break
+                    except StringTooLongError:
+                        trysize += -1
 
 
 
