@@ -25,7 +25,7 @@ class Message_Generator(object):
         opened = urlopen(self.url)
         content = opened.read()
 
-        soup = BeautifulSoup(content, "lxml")
+        soup = BeautifulSoup(content)
 
         f = open(self.file_path,'r')
         commands = f.readlines()

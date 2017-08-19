@@ -19,13 +19,20 @@ import time
 import serial
 from TransitionFunctions import *
 from Generate_Layout import *
+from MessageGenerator import *
+from WeatherClasses import *
+import os
 
 
 z = SimpleTransition('', 'z')
 
 fontsize = 9
 minfontsize = 3
+wait_time = 300
 
+base_directory = os.path.dirname(__file__)
+weather_API_key = open(os.path.join(base_directory,'WeatherKey.txt')).readline()
+default_font_path = os.path.join(base_directory,'PressStart2P.ttf')
 
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
     # Create google sheets object
@@ -66,6 +73,10 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
             lstGeneratedMessages = Message_Generator(processmessage[1],processmessage[2]).create_messages()
             for Generated_Message in lstGeneratedMessages:
                 lstTemporaryMessages.append(Generated_Message)
+        elif processmessage[0] == "WeatherLocation":
+            location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key, default_font_path)
+            lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
+
 
 port = '/dev/ttyS0'
 
@@ -86,13 +97,15 @@ lstTransitMessages = []
 #     "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=58&routecode=10121&direction=0", "Tchoup Bus"))
 
 
-q = datetime.datetime(1990,1,1,1,1)
+q = datetime.datetime(1990, 1, 1, 1, 1)
 
 start_time = datetime.time(6,45)
 end_time = datetime.time(23,00)
 
 while True:
-    if start_time < q.now().time() < end_time:
+    q = datetime.datetime(1990, 1, 1, 1, 1)
+    now_time_fix = q.now().time()
+    if start_time < now_time_fix < end_time:
         # Reset list of calendars and messages to display
         lstCalendars = []
         lstMessagestoDisplay = []
@@ -140,12 +153,12 @@ while True:
         for message in lstMessagestoDisplay:
             try:
                 Display.update(random.choice(transition_functions), message,
-                               font=ImageFont.truetype('/home/pi/Documents/flip-sign/PressStart2P.ttf', size=9))
-                time.sleep(300)
+                               font=ImageFont.truetype(default_font_path, size=9))
+                time.sleep(wait_time)
             # if we've got an internet connection problem, tell the user about it
             except IOError:
                 Display.update(SimpleTransition, BasicTextMessage("Check Internet"),
-                               font=ImageFont.truetype('/home/pi/Documents/flip-sign/PressStart2P.ttf', size=9))
+                               font=ImageFont.truetype(default_font_path, size=9))
             except DateMessageInPastError:
                 # if it's a one time specific date message, then valueerror means the date is passed
                 # if it's not a one-time specific date message, then this is a real error
@@ -153,12 +166,11 @@ while True:
                     print("Had a case where a one-time specific date message was in the past.")
                     pass
             except StringTooLongError:
-                trysize = fontsize
+                trysize = fontsize - 1
                 while trysize >= minfontsize:
                     try:
                         Display.update(SimpleTransition, message,
-                                       font=ImageFont.truetype('/Users/cmcd/PycharmProjects/Sign/PressStart2P.ttf',
-                                                               size=trysize))
+                                       font=ImageFont.truetype(default_font_path, size=trysize))
                         break
                     except StringTooLongError:
                         trysize += -1

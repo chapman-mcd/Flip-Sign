@@ -20,10 +20,14 @@ import serial
 from TransitionFunctions import *
 from Generate_Layout import *
 from MessageGenerator import *
+from WeatherClasses import *
 
 fontsize = 9
 minfontsize = 3
 
+base_directory = os.path.dirname(__file__)
+weather_API_key = open(os.path.join(base_directory,'WeatherKey.txt')).readline()
+default_font_path = os.path.join(base_directory,'PressStart2P.ttf')
 
 z = SimpleTransition('','z')
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
@@ -65,6 +69,9 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
             lstGeneratedMessages = Message_Generator(processmessage[1],processmessage[2]).create_messages()
             for Generated_Message in lstGeneratedMessages:
                 lstTemporaryMessages.append(Generated_Message)
+        elif processmessage[0] == "WeatherLocation":
+            location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key, default_font_path)
+            lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
 
 z = serial.Serial('/dev/cu.usbmodemFD131',9600)
 
@@ -86,7 +93,7 @@ try:
     GetGoogleSheetData("1cmbeXA6WeWJBWl9ge8S-LAuX0zvPBPBpIO1iRZngz8g", get_credentials(), lstCalendars, check)
     lstTemporaryMessages = check
     print("Pulled google sheet data")
-except IOError:
+except ValueError:
     # if the internet is down, do nothing
     print("Found no internet connection when pulling google sheet data.")
     pass

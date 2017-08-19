@@ -333,7 +333,7 @@ def initialize_row_spacing_lookup():
     at the top and how many go between each line.
     :return: a lookup table, which is a list of lists of tuples.
     """
-    output = [[None]*7 for i in range(5)]
+    output = [[(None, None)]*12 for i in range(12)]
     output[3][0] = (0, 0)
     output[3][1] = (0, 0)
     output[3][2] = (0, 1)
@@ -356,6 +356,9 @@ def message_to_image(message, columns, rows, max_width, total_height, font, disp
     # calculate y position and spacing - more difficult since there are multiple lines and spacing between
     total_y_space = rows - total_height
     yposition, per_line = initialize_row_spacing_lookup()[display_height_chars][total_y_space]
+    if yposition is None:
+        yposition = total_y_space // 2 + 1
+        per_line = 0
     line_height = font.getsize('A')[1]
     # iterate through the lines in the message, writing each line at the right position and then
     # incrementing the position
