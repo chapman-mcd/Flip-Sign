@@ -83,7 +83,7 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
 
 port = '/dev/ttyS0'
 
-serialinterface = serial.Serial(port=port, baudrate=57600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
+serialinterface = serial.Serial(port=port, baudrate=19600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
                                 timeout=1, stopbits=serial.STOPBITS_ONE)
 
 Display = FlipDotDisplay(columns=168, rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
@@ -135,7 +135,23 @@ while True:
             # create a temporary list of messages from the google calendar routine
             temp = []
             try:
-                temp = cal.create_messages(5)
+                # run the message creation
+                in_tuple = cal.create_messages(5)
+                # the first element of the tuple is a list of event messages
+                temp = in_tuple[0]
+                # the second element of the tuple is a list of tuples
+                # first element of each tuple is the location string
+                # second element is the number of days until that event
+                for location in in_tuple[1]:
+                    # turn the first element of each tuple into a weather location
+                    weather_location = WeatherLocation(location[0], location[0], weather_API_key,
+                                                       default_font_path, google_location_key=google_location_key,
+                                                       home_location=home_location)
+                    # get the forecast - go ahead a max of five days or until the event starts
+                    num_of_days_until = min(5, location[1])
+                    weather_forecast = weather_location.ten_day_forecast(rows=21, columns=168,
+                                                                         daysfromnow=num_of_days_until)
+                    temp.append(weather_forecast)
                 print("Created messages from google calendar.")
             except IOError:
                 pass
