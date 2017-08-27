@@ -16,7 +16,7 @@ class WeatherLocation(object):
     
     Weather data will come from the weather underground API.
     """
-    def __init__(self, location_string, label, key, font):
+    def __init__(self, location_string, label, key, font, google_location_key=None, home_location=None):
         """
         
         :param location_string: a string to be passed to the weather underground API that identifies the location
@@ -30,9 +30,41 @@ class WeatherLocation(object):
         self.label = label
         self.dir = os.path.join(os.path.dirname(__file__), 'Weather_Images')
         self.font = font
+        self.google_location_key = google_location_key
+        self.home_location = home_location
+        self.use_google = self.google_location_key is not None and self.home_location is not None
 
-        # Determine proper URL to use for this location
-        self.url = 'http://api.wunderground.com/api/' + self.api_key + '/forecast10day/q/' + location_string + '.json'
+        self.url = None
+        #  Determine proper URL to use for this location
+        # if using the google method then feed everything through the google APIs
+        if self.use_google:
+            # determine if the location can be parsed using google's geocoding API
+            geocode_url = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + \
+                          self.location_string.replace(' ','+') + '&key=' + self.google_location_key
+            geocode_json = json.loads(urlopen(geocode_url).read().decode('utf-8'))
+            if geocode_json['status'] == 'OK':
+                #now we know it can be parsed using the geocoding API, find out if it is more than 100 miles from home
+                directions_url = 'https://maps.googleapis.com/maps/api/directions/json?' + 'origin=place_id:' + \
+                    geocode_json['results'][0]['place_id'] + '&destination=' + self.home_location + '&key=' + \
+                                 self.google_location_key
+                directions_json = json.loads(urlopen(directions_url).read().decode('utf-8'))
+                # if the directions API returns zero results that means there's no way to drive (it must be far away)
+                # or if the distance is more than 160934 meters
+                if directions_json['status'] == 'ZERO_RESULTS' or \
+                    directions_json['routes'][0]['legs'][0]['distance']['value'] > 160934:
+                    self.url = 'http://api.wunderground.com/api/' + self.api_key + '/forecast10day/q/' + \
+                               str(geocode_json['results'][0]['geometry']['location']['lat']) + ',' + \
+                               str(geocode_json['results'][0]['geometry']['location']['lng']) + '.json'
+                # if we get here then our location is within 100 miles of home_location
+                else:
+                    pass
+
+            else:
+                pass
+
+        # if not using google, then just generate the URL directly
+        else:
+            self.url = 'http://api.wunderground.com/api/' + self.api_key + '/forecast10day/q/' + location_string + '.json'
 
     def ten_day_forecast(self, rows, columns, daysfromnow):
         """
@@ -41,6 +73,9 @@ class WeatherLocation(object):
         """
         assert rows == 21
         assert columns == 168
+
+        if self.url == None:
+            return None
 
         url_opened = urlopen(self.url)
         url_decoded = url_opened.read().decode('utf-8')

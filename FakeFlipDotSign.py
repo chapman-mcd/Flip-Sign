@@ -28,6 +28,9 @@ minfontsize = 3
 base_directory = os.path.dirname(__file__)
 weather_API_key = open(os.path.join(base_directory,'WeatherKey.txt')).readline()
 default_font_path = os.path.join(base_directory,'PressStart2P.ttf')
+google_sheet_id = open(os.path.join(base_directory,'GoogleSheet.txt')).readline()
+google_location_key = open(os.path.join(base_directory,'Google_Location_Key.txt')).readline()
+home_location = input('Please enter zio code for home location: ')
 
 z = SimpleTransition('','z')
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
@@ -71,7 +74,9 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
                 lstTemporaryMessages.append(Generated_Message)
         elif processmessage[0] == "WeatherLocation":
             location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key, default_font_path)
-            lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
+            forecast = location.ten_day_forecast(rows=21, columns=168, daysfromnow=0)
+            if forecast is not None:
+                lstTemporaryMessages.append(forecast)
 
 z = serial.Serial('/dev/cu.usbmodemFD131',9600)
 
@@ -90,7 +95,7 @@ try:
     # attempt to get new temporary messages and calendars from the google spreadsheet
     # the "check" list is used so that the temporary messages list is only replaced if the internet is up
     check = []
-    GetGoogleSheetData("1cmbeXA6WeWJBWl9ge8S-LAuX0zvPBPBpIO1iRZngz8g", get_credentials(), lstCalendars, check)
+    GetGoogleSheetData(google_sheet_id, get_credentials(), lstCalendars, check)
     lstTemporaryMessages = check
     print("Pulled google sheet data")
 except ValueError:
@@ -108,7 +113,22 @@ for cal in lstCalendars:
     # create a temporary list of messages from the google calendar routine
     temp = []
     try:
-        temp = cal.create_messages(5)
+        # run the message creation
+        in_tuple = cal.create_messages(5)
+        # the first element of the tuple is a list of event messages
+        temp = in_tuple[0]
+        # the second element of the tuple is a list of tuples
+        # first element of each tuple is the location string
+        # second element is the number of days until that event
+        for location in in_tuple[1]:
+            # turn the first element of each tuple into a weather location
+            weather_location = WeatherLocation(location[0], location[0], weather_API_key,
+                                               default_font_path, google_location_key=google_location_key,
+                                               home_location=home_location)
+            # get the forecast - go ahead a max of five days or until the event starts
+            num_of_days_until = min(5, location[1])
+            weather_forecast = weather_location.ten_day_forecast(rows=21, columns=168, daysfromnow=num_of_days_until)
+            temp.append(weather_forecast)
         print("Created messages from google calendar.")
     except IOError:
         pass

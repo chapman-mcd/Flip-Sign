@@ -33,6 +33,9 @@ wait_time = 300
 base_directory = os.path.dirname(__file__)
 weather_API_key = open(os.path.join(base_directory,'WeatherKey.txt')).readline()
 default_font_path = os.path.join(base_directory,'PressStart2P.ttf')
+google_sheet_id = open(os.path.join(base_directory,'GoogleSheet.txt')).readline()
+google_location_key = open(os.path.join(base_directory,'Google_Location_Key.txt')).readline()
+home_location = input('Please enter zip code for home location: ')
 
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
     # Create google sheets object
@@ -114,7 +117,7 @@ while True:
             # attempt to get new temporary messages and calendars from the google spreadsheet
             # the "check" list is used so that the temporary messages list is only replaced if the internet is up
             check = []
-            GetGoogleSheetData("1cmbeXA6WeWJBWl9ge8S-LAuX0zvPBPBpIO1iRZngz8g", get_credentials(), lstCalendars, check)
+            GetGoogleSheetData(google_sheet_id, get_credentials(), lstCalendars, check)
             lstTemporaryMessages = check
             print("Pulled google sheet data")
         except IOError:

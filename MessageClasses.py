@@ -9,6 +9,7 @@ from datetime import date
 from bs4 import BeautifulSoup
 import httplib2
 import os
+import json
 
 from apiclient import discovery
 import oauth2client
@@ -63,19 +64,22 @@ class GoogleCalendar(object):
     To initialize, it takes a calendar ID (obtainable from google), and a set of OAuth2.0 credentials which
     provide access to that calendar ID.
 
-    The create_messages method returns a list of OneTimeSpecificDateMessage objects which represent the first
-    num_events events in the google calendar that are colored red (colorId = 11).  Events not colored red are
-    ignored -- this allows the user to select which events will show up on the sign.
+    The create_messages method returns a tuple of lists.  First list is a list of OneTimeSpecificDateMessage objects 
+    which represent the first num_events events in the google calendar that are colored red (colorId = 11).  
+    Events not colored red are ignored -- this allows the user to select which events will show up on the sign.
+    
+    The second list is a list of locations for events that are within 8 days of now.  Those locations can then be used
+    to generate weather messages.
 
     Additionally, the returned message objects will by default have their occasion set as the 'summary' attribute
     of the calendar event.  This can be overridden with any text inside the description of the calendar event
     that is wrapped in double asterisks.
     """
-    def __init__(self,calID,credentials):
+    def __init__(self,calID, credentials):
         self.credentials = credentials
         self.calID = calID
 
-    def create_messages(self,num_events):
+    def create_messages(self, num_events):
         # Authorize credentials and build google calendar object
         http = self.credentials.authorize(httplib2.Http())
         try:
@@ -96,6 +100,7 @@ class GoogleCalendar(object):
             orderBy='startTime')
 
         result = []
+        result_weather = []
         # While there are still events in the calendar
         # if there are no more events to display, eventsRequest will be returned as none
         while eventsRequest is not None:
@@ -128,12 +133,22 @@ class GoogleCalendar(object):
                     # If not, use the summary attribute as the name
                     else:
                         displayText = event['summary']
+
+                    daysuntil = (startdatetime.date() - datetime.datetime.now().date()).days
+                    # Check if the event starts within ten days
+                    if daysuntil < 8:
+                        # add location to list of locations to send back, if there is a location
+                        try:
+                            result_weather.append((event['location'],daysuntil))
+                        except KeyError:
+                            pass
+
                     # Create OneTimeSpecificDateMessage object and add it to the list
                     result.append(OneTimeSpecificDateMessage(str(displayText),startdatetime))
                     # check to see if we have the right number of events yet
                     # if we do, send back the list
                     if len(result) == num_events:
-                        return result
+                        return (result,result_weather)
             # get ready to request the next page of results from google calendar
             try:
                 eventsRequest = service.events().list_next(eventsRequest,eventsResult)
@@ -142,7 +157,7 @@ class GoogleCalendar(object):
 
         # If we've made it to this point, we've gotten to the end of the calendar before reaching num_events
         # In this case, just return the current list.
-        return result
+        return (result, result_weather)
 
 
 class StringTooLongError(ValueError): pass

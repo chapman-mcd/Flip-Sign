@@ -164,11 +164,17 @@ class FlipDotDisplay(Display):
         # iterate through all the rows and columns in the desired state
         for row in range(len(pixels)):
             for column in range(len(pixels[row])):
-                # if display is inverted, turn 1 into 0 and vice versa, otherwise leave as is
-                if self.invert:
-                    pixel = 1 - pixels[row][column]
+                # sometimes white will be 255, sometimes it will be 1
+                # this code needs white to be 1 for calculation purposes
+                # sanitize 255 into 1, or just use as is
+                if pixels[row][column] == 255:
+                    pixel = 1
                 else:
                     pixel = pixels[row][column]
+
+                # if display is inverted, turn 1 into 0 and vice versa, otherwise leave as is
+                if self.invert:
+                    pixel = 1 - pixel
 
                 # display[displaynum from layout] [ bytenum from layout] incremented by the pixels value * power
                 # of 2 from layout
