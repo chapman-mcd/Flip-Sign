@@ -39,12 +39,9 @@ home_location = input('Please enter zip code for home location: ')
 
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
     # Create google sheets object
-    http = credentials.authorize(httplib2.Http())
-    discoveryurl = ('https://sheets.googleapis.com/$discovery/rest?'
-                    'version=v4')
     result = {}
     try:
-        SHEETS = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=discoveryurl)
+        SHEETS = build('sheets', 'v4', credentials=credentials)
     except httplib2.ServerNotFoundError:
         raise IOError("No Internet Connection")
     try_again = True
@@ -80,15 +77,18 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
             location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key, default_font_path)
             lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
 
-
-port = '/dev/ttyS0'
-
-serialinterface = serial.Serial(port=port, baudrate=19600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
-                                timeout=1, stopbits=serial.STOPBITS_ONE)
-
-Display = FlipDotDisplay(columns=168, rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
-
-transition_functions = [SimpleTransition, dissolve_changes_only]
+# If system is running on mac (development)
+if os.uname().sysname == "Darwin":
+    Display = FakeFlipDotDisplay(columns=168, rows=21, serialinterface=None, layout=None)
+    transition_functions = [SimpleTransition]
+    wait_time = 5
+# if system is running on raspberry linux (production)
+elif os.uname().sysname == "Linux":
+    port = '/dev/ttyS0'
+    serialinterface = serial.Serial(port=port, baudrate=19600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
+                                    timeout=1, stopbits=serial.STOPBITS_ONE)
+    Display = FlipDotDisplay(columns=168, rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
+    transition_functions = [SimpleTransition, dissolve_changes_only]
 
 # set up list of transit messages - since this is static, it is done outside the loop
 lstTransitMessages = []
@@ -194,8 +194,9 @@ while True:
                     except StringTooLongError:
                         trysize += -1
 
-
-
-        serialinterface.write(reset_command())
-        time.sleep(1)
-        serialinterface.write(all_black_command())
+        # only write these commands if on raspberry pi
+        # TODO - replace with writing reset images and blank images (platform agnostic)
+        if os.uname().sysname == "Linux":
+            serialinterface.write(reset_command())
+            time.sleep(1)
+            serialinterface.write(all_black_command())

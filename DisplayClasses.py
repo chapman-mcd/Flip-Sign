@@ -36,7 +36,7 @@ class SimpleDisplay(Display):
     """
     This class is the simplest display possible - it just prints the info to the console.
     """
-    def __init__self(self, num_lines, num_chars):
+    def __init__(self, num_lines, num_chars):
         Display.__init__(self, num_lines, num_chars)
 
     def update(self, transitionfunction, messageobject):
@@ -195,7 +195,7 @@ class FlipDotDisplay(Display):
         # write the command to the serial interface
         self.serial.write(cmdstring)
 
-    def update(self, transitionfunction, displayobject,font):
+    def update(self, transitionfunction, displayobject, font):
         # Ensure proper types
         assert isinstance(displayobject, Message) or isinstance(displayobject, Image.Image)
         if isinstance(displayobject, Message):
@@ -304,7 +304,17 @@ class FlipDotDisplay(Display):
 class FakeFlipDotDisplay(FlipDotDisplay):
     def __init__(self, rows, columns, serialinterface, layout):
         self.file_number = 1
-        FlipDotDisplay.__init__(self, rows, columns, serialinterface, layout)
+        # initialize things from FlipDotDisplay but do not check if serial interface is real
+        self.rows = rows
+        self.columns = columns
+        self.layout = copy.deepcopy(layout)
+        self.serial = serialinterface
+        self.invert = False
+
+        # initialize current state to all black and then set the display to it
+        self.currentstate = Image.new('1', (self.columns, self.rows), 0)
+        self.show(self.currentstate)
+        self.currentmessage = None
 
     def show(self, desiredstate):
         desiredstate.format = 'PNG'

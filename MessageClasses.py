@@ -11,20 +11,17 @@ import httplib2
 import os
 import json
 
-from apiclient import discovery
-import oauth2client
-from oauth2client import client
-from oauth2client import tools
-
-try:
-    import argparse
-    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
-except ImportError:
-    flags = None
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/calendar-python-quickstart.json
-SCOPES = 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/spreadsheets'
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive.readonly']
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'Sign Project'
 
@@ -36,26 +33,27 @@ def get_credentials():
     the OAuth2 flow is completed to obtain the new credentials.
 
     Returns:
-        Credentials, the obtained credential.
+        Creds, the obtained credential.
     """
-    home_dir = os.path.expanduser('~')
-    credential_dir = os.path.join(home_dir, '.credentials')
-    if not os.path.exists(credential_dir):
-        os.makedirs(credential_dir)
-    credential_path = os.path.join(credential_dir,
-                                   'sign_project.json')
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                CLIENT_SECRET_FILE, SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
 
-    store = oauth2client.file.Storage(credential_path)
-    credentials = store.get()
-    if not credentials or credentials.invalid:
-        flow = client.flow_from_clientsecrets(CLIENT_SECRET_FILE, SCOPES)
-        flow.user_agent = APPLICATION_NAME
-        if flags:
-            credentials = tools.run_flow(flow, store, flags)
-        else: # Needed only for compatibility with Python 2.6
-            credentials = tools.run(flow, store)
-        #print('Storing credentials to ' + credential_path)
-    return credentials
+    return creds
 
 
 class GoogleCalendar(object):
@@ -64,10 +62,10 @@ class GoogleCalendar(object):
     To initialize, it takes a calendar ID (obtainable from google), and a set of OAuth2.0 credentials which
     provide access to that calendar ID.
 
-    The create_messages method returns a tuple of lists.  First list is a list of OneTimeSpecificDateMessage objects 
-    which represent the first num_events events in the google calendar that are colored red (colorId = 11).  
+    The create_messages method returns a tuple of lists.  First list is a list of OneTimeSpecificDateMessage objects
+    which represent the first num_events events in the google calendar that are colored red (colorId = 11).
     Events not colored red are ignored -- this allows the user to select which events will show up on the sign.
-    
+
     The second list is a list of locations for events that are within 8 days of now.  Those locations can then be used
     to generate weather messages.
 
@@ -81,9 +79,8 @@ class GoogleCalendar(object):
 
     def create_messages(self, num_events):
         # Authorize credentials and build google calendar object
-        http = self.credentials.authorize(httplib2.Http())
         try:
-            service = discovery.build('calendar','v3',http=http)
+            service = build('calendar', 'v3', credentials=self.credentials)
         except httplib2.ServerNotFoundError:
             raise IOError("No internet connection")
 
