@@ -31,10 +31,10 @@ minfontsize = 3
 wait_time = 300
 
 base_directory = os.path.dirname(__file__)
-weather_API_key = open(os.path.join(base_directory,'WeatherKey.txt')).readline()
-default_font_path = os.path.join(base_directory,'PressStart2P.ttf')
-google_sheet_id = open(os.path.join(base_directory,'GoogleSheet.txt')).readline()
-google_location_key = open(os.path.join(base_directory,'Google_Location_Key.txt')).readline()
+weather_API_key = open(os.path.join(base_directory, 'WeatherKey.txt')).readline()
+default_font_path = os.path.join(base_directory, 'PressStart2P.ttf')
+google_sheet_id = open(os.path.join(base_directory, 'GoogleSheet.txt')).readline()
+google_location_key = open(os.path.join(base_directory, 'Google_Location_Key.txt')).readline()
 home_location = input('Please enter zip code for home location: ')
 
 def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages):
@@ -81,6 +81,7 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
 if os.uname().sysname == "Darwin":
     Display = FakeFlipDotDisplay(columns=168, rows=21, serialinterface=None, layout=None)
     transition_functions = [SimpleTransition]
+    # override wait_time for faster running / debugging
     wait_time = 5
 # if system is running on raspberry linux (production)
 elif os.uname().sysname == "Linux":
@@ -89,6 +90,8 @@ elif os.uname().sysname == "Linux":
                                     timeout=1, stopbits=serial.STOPBITS_ONE)
     Display = FlipDotDisplay(columns=168, rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
     transition_functions = [SimpleTransition, dissolve_changes_only]
+else:
+    raise ValueError("Unsupported platform - must be MacOS or Linux")
 
 # set up list of transit messages - since this is static, it is done outside the loop
 lstTransitMessages = []
