@@ -194,9 +194,9 @@ while True:
                     except StringTooLongError:
                         trysize += -1
 
-        # only write these commands if on raspberry pi
-        # TODO - replace with writing reset images and blank images (platform agnostic)
-        if os.uname().sysname == "Linux":
-            serialinterface.write(reset_command())
-            time.sleep(1)
-            serialinterface.write(all_black_command())
+        # give the dots some exercise
+        # flip to all white and then all black
+        # PIL wants the image size as width, height so run the tuple backwards
+        Display.show(Image.new('1', Display.get_size()[::-1], 1))
+        time.sleep(1)
+        Display.show(Image.new('1', Display.get_size()[::-1], 0))

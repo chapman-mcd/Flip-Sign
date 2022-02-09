@@ -140,6 +140,13 @@ class FlipDotDisplay(Display):
         """
         return self.invert
 
+    def get_size(self):
+        """
+        Safe way to get the size of the display
+        :return: tuple of ints (rows, columns) indicating the size of display
+        """
+        return (self.rows, self.columns)
+
     def show(self, desiredstate):
         """
         Writes the desired state to the display.
