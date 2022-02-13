@@ -193,6 +193,7 @@ while True:
                     try:
                         Display.update(SimpleTransition, message,
                                        font=ImageFont.truetype(default_font_path, size=trysize))
+                        time.sleep(wait_time)
                         break
                     except StringTooLongError:
                         trysize += -1
