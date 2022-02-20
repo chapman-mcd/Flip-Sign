@@ -22,7 +22,7 @@ from Generate_Layout import *
 from MessageGenerator import *
 from WeatherClasses import *
 import os
-
+from datetime import time as dt_time
 
 z = SimpleTransition('', 'z')
 
@@ -74,7 +74,8 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
             for Generated_Message in lstGeneratedMessages:
                 lstTemporaryMessages.append(Generated_Message)
         elif processmessage[0] == "WeatherLocation":
-            location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key, default_font_path)
+            location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key,
+                                       default_font_path, google_location_key=google_location_key)
             lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
 
 # If system is running on mac (development)
@@ -103,13 +104,13 @@ lstTransitMessages = []
 #     "http://www.norta.com/Mobile/whers-my-busdetail.aspx?stopcode=58&routecode=10121&direction=0", "Tchoup Bus"))
 
 
-q = datetime.datetime(1990, 1, 1, 1, 1)
+q = datetime(1990, 1, 1, 1, 1)
 
-start_time = datetime.time(6,45)
-end_time = datetime.time(23,00)
+start_time = dt_time(6,45)
+end_time = dt_time(23,00)
 
 while True:
-    q = datetime.datetime(1990, 1, 1, 1, 1)
+    q = datetime(1990, 1, 1, 1, 1)
     now_time_fix = q.now().time()
     if start_time < now_time_fix < end_time:
         # Reset list of calendars and messages to display
@@ -163,7 +164,7 @@ while True:
             for message in temp:
                 lstTemporaryMessages.append(message)
         # if it's between 6 and 9 AM, we care a lot more about transit than anything else, add a lot more of those
-        if 6 < datetime.datetime.now().hour < 9:
+        if 6 < datetime.now().hour < 9:
             for i in range(3):
                 lstMessagestoDisplay += copy.deepcopy(lstTransitMessages)
         # build the list of messages to display

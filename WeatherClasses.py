@@ -1,12 +1,18 @@
-from urllib.request import urlopen
+import operator
+from urllib.request import Request, urlopen
+from urllib.parse import quote
+import gzip
 import json
 import os
+from math import acos, sin, cos
 from PIL import Image
 from PIL import ImageChops
 from PIL import ImageFont
 from MessageClasses import parselines
 from MessageClasses import StringTooLongError
 from DisplayClasses import message_to_image
+from cachetools import cachedmethod, TTLCache
+from datetime import datetime
 
 
 class WeatherLocation(object):
@@ -32,40 +38,61 @@ class WeatherLocation(object):
         self.font = font
         self.google_location_key = google_location_key
         self.home_location = home_location
-        self.use_google = self.google_location_key is not None and self.home_location is not None
+        self.distance_to_home = 0
+        self.locations_cache = TTLCache(maxsize=32, ttl=60*60*24) # cache location info for 1 day
+        self.forecast_cache = TTLCache(maxsize=32, ttl=60*60*4) # cache weather forecasts for 4 hours
 
-        self.url = None
-        #  Determine proper URL to use for this location
-        # if using the google method then feed everything through the google APIs
-        if self.use_google:
-            # determine if the location can be parsed using google's geocoding API
-            geocode_url = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + \
-                          self.location_string.replace(' ','+') + '&key=' + self.google_location_key
-            geocode_json = json.loads(urlopen(geocode_url).read().decode('utf-8'))
-            if geocode_json['status'] == 'OK':
-                #now we know it can be parsed using the geocoding API, find out if it is more than 100 miles from home
-                directions_url = 'https://maps.googleapis.com/maps/api/directions/json?' + 'origin=place_id:' + \
-                    geocode_json['results'][0]['place_id'] + '&destination=' + self.home_location + '&key=' + \
-                                 self.google_location_key
-                directions_json = json.loads(urlopen(directions_url).read().decode('utf-8'))
-                # if the directions API returns zero results that means there's no way to drive (it must be far away)
-                # or if the distance is more than 160934 meters
-                if directions_json['status'] == 'ZERO_RESULTS' or \
-                    directions_json['routes'][0]['legs'][0]['distance']['value'] > 160934:
-                    self.url = 'http://api.wunderground.com/api/' + self.api_key + '/forecast10day/q/' + \
-                               str(geocode_json['results'][0]['geometry']['location']['lat']) + ',' + \
-                               str(geocode_json['results'][0]['geometry']['location']['lng']) + '.json'
-                # if we get here then our location is within 100 miles of home_location
-                else:
-                    pass
+        self.forecast_url = None
+        self.accuweather_location_code = None
 
-            else:
-                pass
+        # stash base URLs for simpler code and easier updates
+        geocode_base_url = 'https://maps.googleapis.com/maps/api/geocode/json?address='
+        weather_loc_base_url = 'http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?'
 
-        # if not using google, then just generate the URL directly
-        else:
-            self.url = 'http://api.wunderground.com/api/' + self.api_key + '/forecast10day/q/' + location_string + '.json'
+        # Get lat-long of target
+        response = self.location_api_request((geocode_base_url, quote(self.location_string),
+                                              "&key=", self.google_location_key))
+        self.location_lat_long = response['results'][0]['geometry']['location']
 
+        # calculate distance to home
+        if self.home_location is not None:
+            # Get lat-long of home location
+            response = self.location_api_request((geocode_base_url, quote(self.home_location),
+                                                  "&key=", self.google_location_key))
+            self.home_lat_long = response['results'][0]['geometry']['location']
+
+            #Calculate great-circle distance
+            radius_earth = 6371 #km
+            self.distance_to_home = acos(sin(self.home_lat_long['lat'])*sin(self.location_lat_long['lat']) +
+                                         cos(self.home_lat_long['lat'])*cos(self.location_lat_long['lat']) +
+                                         cos(self.location_lat_long['lng']-self.home_lat_long['lng'])) * radius_earth
+
+        if self.home_location is None or self.distance_to_home > 160:
+            # Pull location code from API
+            response = self.location_api_request((weather_loc_base_url, "apikey=", self.api_key, "&q=",
+                                                  str(self.location_lat_long['lat']), ",",
+                                                  str(self.location_lat_long['lng'])))
+            self.accuweather_location_code = response['Key']
+            # Build forecast request URL
+            self.forecast_url = 'http://dataservice.accuweather.com/forecasts/v1/daily/5day/' + self.accuweather_location_code +\
+                "?apikey=" + self.api_key + "&metric=true&details=true"
+
+    @cachedmethod(cache=operator.attrgetter('locations_cache'))
+    def location_api_request(self, url):
+        """
+        Cached class method for making api requests.  Tested only against the google geocoding API and
+        the AccuWeather API.  No errors are handled in this function, all are passed along.
+
+        :param url: string, tuple or list.  Will be packed together to make the API request.
+        :return: the API response, processed into a python variable
+        """
+        url = ''.join(url)
+        req = Request(url, headers={"Accept-Encoding": "gzip, deflate"})
+        response = json.loads(gzip.decompress(urlopen(req).read()))
+
+        return response
+
+    @cachedmethod(cache=operator.attrgetter('forecast_cache'))
     def ten_day_forecast(self, rows, columns, daysfromnow):
         """
         Updates the weather information and returns an image object for display on the sign
@@ -74,41 +101,50 @@ class WeatherLocation(object):
         assert rows == 21
         assert columns == 168
 
-        if self.url == None:
+        if self.forecast_url is None:
             return None
 
-        url_opened = urlopen(self.url)
-        url_decoded = url_opened.read().decode('utf-8')
-        json_out = json.loads(url_decoded)
-        forecast = json_out['forecast']['simpleforecast']['forecastday']
+        req = Request(self.forecast_url, headers={"Accept-Encoding": "gzip, deflate"})
+        response = json.loads(gzip.decompress(urlopen(req).read()))
+        forecast = response['DailyForecasts']
 
         weather_icon_lookup = {
-            'clear': 'sunny',
-            'unknown': 'tstorms',
-            'mostlysunny': 'partlycloudy',
-            'partlysunny': 'mostlycloudy',
-            'hazy': 'fog',
-            'flurries': 'snow',
+            1: 'sunny', 2: 'sunny',
+            3: 'partlycloudy', 4: 'partlycloudy',
+            5: 'mostlycloudy', 6: 'mostlycloudy',
+            7: 'cloudy', 8: 'cloudy',
+            11: 'fog',
+            12: 'rain', 13: 'rain', 14: 'rain',
+            15: 'tstorms', 16: 'tstorms', 17: 'tstorms',
+            18: 'rain',
+            19: 'snow', 20: 'snow', 21: 'snow', 22: 'snow', 23: 'snow',
+            24: 'sleet', 25: 'sleet', 26: 'sleet', 29: 'sleet',
+            30: 'sunny', 31: 'snow', 32: 'cloudy'
         }
 
         weather_forecast_images = []
 
+        # dictionary to turn ISO weekdays into short day-of-week strings
+        dow_short = {1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT', 7: 'SUN'}
+
         # need to parse the list of stuff from the json into a list of image objects
         # run through the first five days of the forecast from the json
-        for i in range(daysfromnow, min(10, daysfromnow + 5)):
+        for i in range(daysfromnow, 5):
             this_image = Image.new('1', (22, 21), 0)
             # paste the day of week in the bottom right
-            dow_path = os.path.join(self.dir, forecast[i]['date']['weekday_short'].upper() + ".png")
+            dow_iso = datetime.fromisoformat(forecast[i]['Date']).isoweekday()
+            dow_path = os.path.join(self.dir, dow_short[dow_iso].upper() + ".png")
             dow_image = Image.open(dow_path)
             this_image.paste(dow_image, (0, 6))
 
             # write the daily high in the top left
-            high = forecast[i]['high']['fahrenheit']
+            high = int(round(forecast[i]['Temperature']['Maximum']['Value']))
             # determine whether the high is below zero
-            if high.find("-") == -1:
+            if high >= 0:
                 below_zero = False
             else:
                 below_zero = True
+            high = str(high)
 
             xposition = 0
             # if we have extra space before the high, we need to pad the top
@@ -143,17 +179,20 @@ class WeatherLocation(object):
                 xposition += 4
 
             # write the percentage chance of precipitation to the image
-            chance_of_rain_rounded = round(forecast[i]['pop']/20)
+            day_chance_rain = forecast[i]['Day']['PrecipitationProbability']
+            night_chance_rain = forecast[i]['Night']['PrecipitationProbability']
+            chance_of_rain_rounded = round(max(day_chance_rain, night_chance_rain) / 20)
             this_image.paste(1, (xposition, 5 - chance_of_rain_rounded, xposition + 1, 5))
             xposition += 2
 
             # write the daily low in the top right
-            low = forecast[i]['low']['fahrenheit']
+            low = int(round(forecast[i]['Temperature']['Minimum']['Value']))
             # determine whether the low is below zero
-            if low.find("-") == -1:
+            if low >= 0:
                 below_zero = False
             else:
                 below_zero = True
+            low = str(low)
 
             # if we're below zero on the daily low, add a stripe of yellow pixels
             if below_zero:
@@ -186,25 +225,12 @@ class WeatherLocation(object):
                 this_image.paste(number_image, (xposition, 0))
                 xposition += 4
 
-
-            # now it's time to write the weather icon
-            # determine whether there is a "chance" of the weather
-            chance_of = not forecast[i]['icon'].find('chance') == -1
-            # so you're telling me there's a chance...
-
-            icon = forecast[i]['icon'].replace('chance','')
-
-            # run thr icon through our lookup dictionary to sanitize it down into stuff we have icons for
-            # if it's not in there, we have an icon for it
-            if icon in weather_icon_lookup:
-                icon = weather_icon_lookup[icon]
+            # run the icon through our lookup dictionary
+            icon = weather_icon_lookup[forecast[i]['Day']['Icon']]
 
             # paste weather icon into the image
             icon_path = os.path.join(self.dir, icon +".png")
             icon_image = Image.open(icon_path)
-            # if it's a chance, then invert the colors on the image
-            if chance_of:
-                icon_image = ImageChops.invert(icon_image)
             this_image.paste(icon_image, (6, 6))
 
             weather_forecast_images.append(this_image)
