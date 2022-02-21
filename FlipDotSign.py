@@ -87,7 +87,7 @@ if os.uname().sysname == "Darwin":
 # if system is running on raspberry linux (production)
 elif os.uname().sysname == "Linux":
     port = '/dev/ttyS0'
-    serialinterface = serial.Serial(port=port, baudrate=19600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
+    serialinterface = serial.Serial(port=port, baudrate=57600, parity=serial.PARITY_NONE, bytesize=serial.EIGHTBITS,
                                     timeout=1, stopbits=serial.STOPBITS_ONE)
     Display = FlipDotDisplay(columns=168, rows=21, serialinterface=serialinterface, layout=Generate_Layout_2())
     transition_functions = [SimpleTransition, dissolve_changes_only]
