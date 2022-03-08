@@ -74,9 +74,12 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
             for Generated_Message in lstGeneratedMessages:
                 lstTemporaryMessages.append(Generated_Message)
         elif processmessage[0] == "WeatherLocation":
-            location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key,
-                                       default_font_path, google_location_key=google_location_key)
-            lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
+            try:
+                location = WeatherLocation(processmessage[1], processmessage[2], weather_API_key,
+                                           default_font_path, google_location_key=google_location_key)
+                lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
+            except urllib.error.HTTPError:
+                print("Problem with weather API")
 
 # If system is running on mac (development)
 if os.uname().sysname == "Darwin":
