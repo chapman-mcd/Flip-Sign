@@ -12,7 +12,7 @@ PressStart2P.ttf
 WeatherKey.txt
 __pycache__/
 imgtest.png
-pngdump/
+pngdump/**
 scratch
 SpanishWordOfTheDay.txt
 WeatherClassesTest.py
@@ -26,3 +26,5 @@ TestingStuff.py
 Google_Drive_Example.py
 token.json
 Weather_Scratch.py
+drive_images/**
+Google_Drive_Folder.txt

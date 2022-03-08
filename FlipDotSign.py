@@ -22,7 +22,9 @@ from Generate_Layout import *
 from MessageGenerator import *
 from WeatherClasses import *
 import os
+import io
 from datetime import time as dt_time
+from googleapiclient.http import MediaIoBaseDownload
 
 z = SimpleTransition('', 'z')
 
@@ -78,6 +80,10 @@ def GetGoogleSheetData(sheetID, credentials, lstCalendars, lstTemporaryMessages)
                                        default_font_path, google_location_key=google_location_key)
             lstTemporaryMessages.append(location.ten_day_forecast(rows=21, columns=168, daysfromnow=0))
 
+# get google drive folder name
+with open('Google_Drive_Folder.txt') as f:
+    google_drive_folder = f.readline()
+
 # If system is running on mac (development)
 if os.uname().sysname == "Darwin":
     Display = FakeFlipDotDisplay(columns=168, rows=21, serialinterface=None, layout=None)
@@ -131,6 +137,36 @@ while True:
         except ValueError:
             print("No google service when opening google sheet.")
             lstTemporaryMessages.append(BasicTextMessage("No Google Service"))
+
+        # get files from google drive
+        try:
+            service = build('drive', 'v3', credentials=get_credentials())
+
+            # Call the Drive v3 API
+            results = service.files().list(q=google_drive_folder,
+                                           pageSize=10, fields="nextPageToken, files(id, name)").execute()
+            items = results.get('files', [])
+
+            if not items:
+                print('No files found.')
+            else:
+                for item in items:
+                    print(u'{0} ({1})'.format(item['name'], item['id']))
+                    file_id = item['id']
+                    request = service.files().get_media(fileId=file_id)
+                    fh = io.FileIO("./drive_images/" + item['name'], mode='wb')
+                    downloader = MediaIoBaseDownload(fh, request)
+                    done = False
+                    while done is False:
+                        status, done = downloader.next_chunk()
+                        print("Download %d%%." % int(status.progress() * 100))
+        except HttpError as error:
+            # TODO(developer) - Handle errors from drive API.
+            print(f'An error occurred: {error}')
+
+        # add google drive files to messages to display
+        for file in os.listdir("./drive_images"):
+            lstTemporaryMessages.append(Image.open("./drive_images/" + file).convert(mode='1'))
 
         # for each calendar in the list of google calendars we want to display
         # if the internet connection check earlier was unsuccessful, then this will be an empty list and the whole block
