@@ -75,7 +75,7 @@ def countdown_format(target_start, target_end, all_day):
     # confirm end time after start time
     if target_end < target_start:
         raise ValueError("End time before start time.")
-    # confirm start time is in the future
+    # confirm end time is in the future
     if target_end < current_time:
         raise ValueError("Target event not in the future.")
 
