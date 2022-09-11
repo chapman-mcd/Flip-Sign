@@ -1,6 +1,5 @@
 import logging
 from urllib.request import Request, urlopen
-from urllib.parse import quote
 import datetime as dt
 from cachetools import cached, TLRUCache
 import json
@@ -39,7 +38,7 @@ def accuweather_cache_ttu(_key, value, now):
 
 _accuweather_cache = TLRUCache(maxsize=10, ttu=accuweather_cache_ttu)
 @cached(cache=_accuweather_cache)
-def accuweather_api_request(url: object) -> object:
+def accuweather_api_request(url):
     """
     Requests the provided URL from the accuweather API and returns.  No errors are handled in this function,
     all are passed along.  Results cached as per ttu function.
@@ -89,8 +88,8 @@ def countdown_format(target_start, target_end, all_day):
         target_end = target_end.replace(hour=23, minute=59, second=59)
 
     # if current time is between start and end (inclusive) return now
-    if current_time <= target_end and current_time >= target_start:
-        return ('Now', '   ')
+    if (current_time <= target_end) and (current_time >= target_start):
+        return 'Now', '   '
 
     # initialize return value
     date_strings = []
@@ -123,6 +122,7 @@ def countdown_format(target_start, target_end, all_day):
     # return the string
     return tuple(date_strings)
 
+
 def format_3char_time_string(difference, divisor):
     """
     Formats a time difference as a 3-character string.  Handles years, months, weeks, days, hours, minutes.
@@ -144,7 +144,8 @@ def format_3char_time_string(difference, divisor):
         out_str = str(difference) + abbreviations[divisor]
 
     # if we only have 2 characters pad a trailing space
-    if len(out_str) == 2: out_str += ' '
+    if len(out_str) == 2:
+        out_str += ' '
 
     return out_str
 
@@ -200,7 +201,8 @@ def calc_diff(current_time, target_start, divisor):
                 new_dt = add_months(current_time, i)
                 break
 
-    return (diff, new_dt, new_divisors)
+    return diff, new_dt, new_divisors
+
 
 def add_years(date, num_years):
     """
@@ -214,10 +216,11 @@ def add_years(date, num_years):
     current_year = date.year
     try:
         new_date = date.replace(year=current_year + num_years)
-    except ValueError: # it is February 29th and the new year is not a leap year
+    except ValueError:  # it is February 29th and the new year is not a leap year
         new_date = date.replace(year=current_year + num_years, day=28)
 
     return new_date
+
 
 def add_months(date, num_months):
     """
@@ -244,7 +247,7 @@ def add_months(date, num_months):
 
     try:
         new_date = date.replace(year=new_year, month=new_month)
-    except ValueError: # new month does not have enough days
+    except ValueError:  # new month does not have enough days
         new_month += 1
         if new_month > 12:
             new_month -= 12
@@ -253,4 +256,3 @@ def add_months(date, num_months):
         new_date += dt.timedelta(days=-1)
 
     return new_date
-
