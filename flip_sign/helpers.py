@@ -3,6 +3,7 @@ from urllib.request import Request, urlopen
 import datetime as dt
 from cachetools import cached, TLRUCache
 import json
+from PIL import ImageFont, ImageDraw, Image
 import gzip
 
 logger_name = 'flip_sign.helpers'
@@ -256,3 +257,53 @@ def add_months(date, num_months):
         new_date += dt.timedelta(days=-1)
 
     return new_date
+
+
+def text_bbox_size(font: ImageFont, text: list or str, line_spacing: int, align: str):
+    """
+    Calculates the size of a message, in pixels.  Takes in a message (split into lines) and font parameters.
+    Returns the size of the written message in pixels, and the appropriate target such that the first pixel of the
+    message is drawn at the origin: (0,0).
+
+    :param font: (PIL.ImageFont) the font to be used
+    :param text: (list or string) the message to be sized
+    :param line_spacing: (int) the spacing between lines, as per PIL.ImageDraw.multiline_text
+    :param align: (str) 'center' or 'left' or 'right'
+    :return: size (tuple), target (tuple)
+              size:  the size of the message, in pixels (rows, columns)
+              target: the location to be fed to multiline_text to put the first pixel at the origin (x, y)
+    """
+
+    # handle case of being passed a list - turn it into a string with newlines
+    if isinstance(text, list):
+        text = '\n'.join(text)
+
+    canvas_size = 1024
+    finished_bbox = False
+
+    # iterate to allow for increasing canvas size if it is too small
+    while not finished_bbox:
+        # create new image filled with black
+        image = Image.new('1', (canvas_size, canvas_size), 0)
+        # draw the message on the canvas in the font at position 10,10 and get bbox
+        draw = ImageDraw.Draw(image)
+        draw.multiline_text(xy=(10, 10), text=text, font=font, anchor='la', spacing=line_spacing, align=align, fill=1)
+        bbox = image.getbbox()
+
+        # check if text hit the edge.  since truncations can happen in strange ways, test with 70% of box as the cutoff
+        if bbox[2] < canvas_size * 0.7 and bbox[3] < canvas_size * 0.7:
+            # if text did not hit the edge, exit the loop
+            finished_bbox = True
+        else:
+            # if text did hit the edge, double the canvas size (subject to max)
+            if canvas_size == 8192:
+                raise ValueError("Font too large.")
+            canvas_size *= 2
+
+    # calculate results from final bbox
+    width = bbox[2] - bbox[0]
+    height = bbox[3] - bbox[1]
+    target_x = 10 - bbox[0]
+    target_y = 10 - bbox[1]
+
+    return (width, height), (target_x, target_y)
