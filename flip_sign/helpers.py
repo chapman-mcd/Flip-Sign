@@ -329,14 +329,14 @@ def wrap_text_split_words(text: str, width: int, replace_whitespace: bool = True
     :param already_wrapped: (list) used internally for recursion
     :return: wrapped_text: (list) the text, wrapped into lines
     """
-
+    
     # handle initial replace whitespace, only if first call (already_wrapped is an empty list)
     if already_wrapped == [] and replace_whitespace:
         text = re.sub(r"[\n\t\v\f\r ]+", " ", text)
-
+        
     # create new list to pass on
     next_wrapped = already_wrapped.copy()
-
+    
     # end recursion condition: max lines hit.  check and handle
     if len(next_wrapped) == max_lines:
         next_wrapped[-1] = next_wrapped[-1][:-len(placeholder)] + placeholder
@@ -345,14 +345,14 @@ def wrap_text_split_words(text: str, width: int, replace_whitespace: bool = True
     # drop line-leading whitespace if required
     if drop_whitespace:
         text = re.sub(r"^\s+", "", text)
-
+        
     # end recursion condition: remaining text fits in this line
     if len(text) < width:
         next_wrapped.append(text)
         return next_wrapped
-
-    else:  # continue recursion: add to wrapped list and call self
+    
+    else:  # continue recursion: add to wrapped list and recur
         next_wrapped.append(text[:width])
-        return wrap_text_split_words(text[width:], width=width, replace_whitespace=replace_whitespace,
+        return wrap_text_split_words(text[width:], width=width, replace_whitespace=replace_whitespace, 
                                      drop_whitespace=drop_whitespace, max_lines=max_lines, placeholder=placeholder,
                                      already_wrapped=next_wrapped)
