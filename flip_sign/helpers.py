@@ -5,6 +5,7 @@ from cachetools import cached, TLRUCache
 import json
 from PIL import ImageFont, ImageDraw, Image
 import gzip
+import re
 
 logger_name = 'flip_sign.helpers'
 
@@ -307,3 +308,51 @@ def text_bbox_size(font: ImageFont, text: list or str, line_spacing: int, align:
     target_y = 10 - bbox[1]
 
     return (width, height), (target_x, target_y)
+
+
+def wrap_text_split_words(text: str, width: int, replace_whitespace: bool = True, drop_whitespace: bool = True,
+                          max_lines: int = None, placeholder: str = '[...]', already_wrapped: list = []):
+    """
+    Wraps the string given in text so that every line is at most width characters long.  Pays no regard to word
+    boundaries, breaking words to fit maximum text into the space.  Very similar in practice to simple string-slicing,
+    but also handles line-leading whitespace and offers additional options similar to textwrap.wrap, allowing for it
+    to be a drop-in replacement.
+
+    Returns a list containing each line of the original text.
+
+    :param text: (str) the text to be wrapped
+    :param width: (int) the maximum number of characters per line
+    :param replace_whitespace: (boolean) whether to replace whitespace characters (\t, \n)
+    :param drop_whitespace: (boolean) whether to replace line-leading whitespace
+    :param max_lines: (int) the maximum number of lines
+    :param placeholder: (str) the string to add at the end in case of truncation.
+    :param already_wrapped: (list) used internally for recursion
+    :return: wrapped_text: (list) the text, wrapped into lines
+    """
+
+    # handle initial replace whitespace, only if first call (already_wrapped is an empty list)
+    if already_wrapped == [] and replace_whitespace:
+        text = re.sub(r"[\n\t\v\f\r ]+", " ", text)
+
+    # create new list to pass on
+    next_wrapped = already_wrapped.copy()
+
+    # end recursion condition: max lines hit.  check and handle
+    if len(next_wrapped) == max_lines:
+        next_wrapped[-1] = next_wrapped[-1][:-len(placeholder)] + placeholder
+        return next_wrapped
+    
+    # drop line-leading whitespace if required
+    if drop_whitespace:
+        text = re.sub(r"^\s+", "", text)
+
+    # end recursion condition: remaining text fits in this line
+    if len(text) < width:
+        next_wrapped.append(text)
+        return next_wrapped
+
+    else:  # continue recursion: add to wrapped list and call self
+        next_wrapped.append(text[:width])
+        return wrap_text_split_words(text[width:], width=width, replace_whitespace=replace_whitespace,
+                                     drop_whitespace=drop_whitespace, max_lines=max_lines, placeholder=placeholder,
+                                     already_wrapped=next_wrapped)

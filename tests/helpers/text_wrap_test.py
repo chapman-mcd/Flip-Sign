@@ -61,3 +61,52 @@ def test_size_function():
     font_5 = ImageFont.truetype(dat_dot_path, size=500)
     with pytest.raises(ValueError) as _:
         flip_sign.helpers.text_bbox_size(font=font_5, text=test_text_5, line_spacing=1, align='left')
+
+
+def test_wrap_text_split_words():
+    # test with default parameters
+    text = "No man ever steps in the same river twice, for \tit is not the\t\nsame river and he is not the same man."
+    answer = ['No man ever steps in',
+              'the same river twice',
+              ', for it is not the ',
+              'same river and he is',
+              'not the same man.']
+    assert flip_sign.helpers.wrap_text_split_words(text=text, width=20, replace_whitespace=True,
+                                                   drop_whitespace=True) == answer
+
+    # test default with different number of columns
+    answer = ['No man ever steps in the',
+              'same river twice, for it',
+              'is not the same river an',
+              'd he is not the same man',
+              '.']
+    assert flip_sign.helpers.wrap_text_split_words(text=text, width=24, replace_whitespace=True,
+                                                   drop_whitespace=True) == answer
+
+    # test with replace_whitespace=False
+    answer = ['No man ever steps in the',
+              'same river twice, for \ti',
+              't is not the\t\nsame river',
+              'and he is not the same m',
+              'an.']
+    assert flip_sign.helpers.wrap_text_split_words(text=text, width=24, replace_whitespace=False,
+                                                   drop_whitespace=True) == answer
+
+    # test with drop_whitespace=False
+    answer = ['No man ever steps in',
+              ' the same river twic',
+              'e, for it is not the',
+              ' same river and he i',
+              's not the same man.']
+    assert flip_sign.helpers.wrap_text_split_words(text=text, width=20, replace_whitespace=True,
+                                                   drop_whitespace=False) == answer
+
+    # test with max_lines and default placeholder
+    answer = ['No man ever steps in', 'the same river [...]']
+    assert flip_sign.helpers.wrap_text_split_words(text=text, width=20, replace_whitespace=True,
+                                                   drop_whitespace=True, max_lines=2) == answer
+
+    # test with max_lines and other placeholder
+    answer = ['No man ever steps in', 'the same riv[Blurgh]']
+    assert flip_sign.helpers.wrap_text_split_words(text=text, width=20, replace_whitespace=True,
+                                                   drop_whitespace=True, max_lines=2, placeholder='[Blurgh]') == answer
