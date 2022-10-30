@@ -6,6 +6,7 @@ import json
 from PIL import ImageFont, ImageDraw, Image
 import gzip
 import re
+import textwrap
 
 logger_name = 'flip_sign.helpers'
 
@@ -356,3 +357,50 @@ def wrap_text_split_words(text: str, width: int, replace_whitespace: bool = True
         return wrap_text_split_words(text[width:], width=width, replace_whitespace=replace_whitespace, 
                                      drop_whitespace=drop_whitespace, max_lines=max_lines, placeholder=placeholder,
                                      already_wrapped=next_wrapped)
+
+
+def bbox_text_no_truncation(bbox_size: tuple, line_spacing: int, text: str, split_words: bool, font: ImageFont,
+                            align: str, **kwargs):
+    """
+    Attempts to iteratively wrap text to fit inside bbox_size without truncating at the end.  Does not change font or
+    size, and so allows for the possibility that the text cannot fit.  Follows method from the wand package
+    documentation.  Uses either textwrap.wrap or wrap_text_split_words internally, depending on the split_words
+    arguemnt.  **kwargs are all passed to textwrap.wrap or wrap_text_split_words.
+
+    Returns a boolean indicating if the text can fit, and a list containing the text post-wrapping.
+
+    :param bbox_size: (tuple) the bounding box the text must fit in
+    :param line_spacing: (int) the line spacing, passed to PIL.ImageDraw.Draw.multiline_text
+    :param text: (str) the text to be fit into the box
+    :param split_words: (Boolean) whether to split words while text wrapping
+    :param font: (PIL.ImageFont) the font to be used
+    :param align: ('left', 'center', 'right') the text alignment
+    :param kwargs: (dict) passed to textwrap.wrap or wrap_text_split_words as appropriate
+    :return: (fits, wrapped_text):
+                fits: (Boolean) whether the message fits
+                wrapped_text: the text, wrapped into lines
+    """
+
+    # initialize loop
+    columns = len(text)
+
+    while columns > 0:
+        # wrap text with current number of columns
+        if split_words:
+            test_text = wrap_text_split_words(text, width=columns, **kwargs)
+        else:
+            test_text = textwrap.wrap(text, width=columns, **kwargs)
+
+        # check size with current number of columns
+        check_size, _ = text_bbox_size(font=font, text=test_text, line_spacing=line_spacing, align=align)
+
+        # if too tall, message does not fit
+        if check_size[1] > bbox_size[1]:
+            return False, []
+        # if the message fits horizontally as well as vertically, return the current setup
+        elif check_size[0] < bbox_size[0]:
+            return True, test_text
+        # if the message doesn't fit, continue looping
+        # reduce number of columns and repeat
+        else:
+            columns += -1
