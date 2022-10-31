@@ -331,6 +331,9 @@ def wrap_text_split_words(text: str, width: int, replace_whitespace: bool = True
     :return: wrapped_text: (list) the text, wrapped into lines
     """
 
+    if width < len(placeholder):
+        raise ValueError("placeholder too large for max width")
+
     # handle initial replace whitespace, only if first call (already_wrapped is an empty list)
     if already_wrapped == [] and replace_whitespace:
         text = re.sub(r"[\n\t\v\f\r ]+", " ", text)

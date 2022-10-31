@@ -110,3 +110,7 @@ def test_wrap_text_split_words():
     answer = ['No man ever steps in', 'the same riv[Blurgh]']
     assert flip_sign.helpers.wrap_text_split_words(text=text, width=20, replace_whitespace=True,
                                                    drop_whitespace=True, max_lines=2, placeholder='[Blurgh]') == answer
+
+    # test with a placeholder too large to fit
+    with pytest.raises(ValueError) as _:
+        flip_sign.helpers.wrap_text_split_words(text=text, width=3, placeholder='[Blurgh]')
