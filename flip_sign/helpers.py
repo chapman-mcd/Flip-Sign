@@ -330,7 +330,7 @@ def wrap_text_split_words(text: str, width: int, replace_whitespace: bool = True
     :param already_wrapped: (list) used internally for recursion
     :return: wrapped_text: (list) the text, wrapped into lines
     """
-    
+
     # handle initial replace whitespace, only if first call (already_wrapped is an empty list)
     if already_wrapped == [] and replace_whitespace:
         text = re.sub(r"[\n\t\v\f\r ]+", " ", text)
@@ -378,7 +378,7 @@ def bbox_text_no_truncation(bbox_size: tuple, line_spacing: int, text: str, spli
     :param kwargs: (dict) passed to textwrap.wrap or wrap_text_split_words as appropriate
     :return: (fits, wrapped_text):
                 fits: (Boolean) whether the message fits
-                wrapped_text: the text, wrapped into lines
+                wrapped_text: (list) the text, wrapped into lines
     """
 
     # initialize loop
@@ -404,3 +404,68 @@ def bbox_text_no_truncation(bbox_size: tuple, line_spacing: int, text: str, spli
         # reduce number of columns and repeat
         else:
             columns += -1
+
+
+def bbox_text_truncation(bbox_size: tuple, line_spacing: int, text: str, split_words: bool, font: ImageFont,
+                         align: str, **kwargs):
+    """
+    Attempts to iteratively wrap text to fit in bbox_size, truncating if necessary.  Given truncation, the text
+    will always fit unless a single line of text is too tall for bbox_size or the truncation placeholder is too large.
+    **kwargs are passed to textwrap.wrap or text_wrap_split_words, as appropriate.
+
+    Returns a boolean indicating if the text can fit, and a list containing the text post-wrap.
+
+    :param bbox_size: (tuple) the bounding box the text must fit in
+    :param line_spacing: (int) the line spacing, passed to PIL.ImageDraw.Draw.multiline_text
+    :param text: (str) the text to be fit into the box
+    :param split_words: (Boolean) whether to split words while text wrapping
+    :param font: (PIL.ImageFont) the font to be used
+    :param align: ('left', 'center', 'right') the text alignment
+    :param kwargs: (dict) passed to textwrap.wrap or wrap_text_split_words as appropriate
+    :return: (fits, wrapped_text):
+                fits: (Boolean) whether the message fits
+                wrapped_text: (list) the text, wrapped into lines
+    """
+
+    # initialize
+    columns = len(text)
+    if split_words:
+        wrap_func = wrap_text_split_words
+    else:
+        wrap_func = textwrap.wrap
+
+    # check for the possibility that a single line is too tall
+    check_size, _ = text_bbox_size(font=font, text=text, line_spacing=line_spacing, align=align)
+    if check_size[1] > bbox_size[1]:
+        return False, []
+
+    # determine number of columns
+    while columns > 0:
+        # wrap text using current number of columns
+        test_text = wrap_func(text=text, width=columns, **kwargs)
+
+        # calculate size - if fits horizontally, break out.  if not, reduce number of columns
+        check_size, _ = text_bbox_size(font=font, text=test_text, line_spacing=line_spacing, align=align)
+        if check_size[0] < bbox_size[0]:
+            break
+        else:
+            columns += -1
+
+    # determine number of lines
+    lines = len(test_text)
+    while lines > 0:
+        # need to wrap in try-except to handle case where placeholder is too large for the columns
+        try:
+            test_text = wrap_func(text=text, width=columns, max_lines=lines, **kwargs)
+        except ValueError as e:
+            if e.args[0] == "placeholder too large for max width":
+                return False, []
+            else:
+                raise
+
+        # calculate size - if it fits vertically, return the answer.  if not, reduce the number of lines.
+        check_size, _ = text_bbox_size(font=font, text=test_text, line_spacing=line_spacing, align=align)
+        if check_size[1] < bbox_size[1]:
+            return True, test_text
+        else:
+            lines += -1
