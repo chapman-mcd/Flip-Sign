@@ -408,6 +408,11 @@ def bbox_text_no_truncation(bbox_size: tuple, line_spacing: int, text: str, spli
         else:
             columns += -1
 
+    # if the loop has completed (can get here in various cases, such as break_long_words=False)
+    # then the text does not fit
+    if columns == 0:
+        return False, []
+
 
 def bbox_text_truncation(bbox_size: tuple, line_spacing: int, text: str, split_words: bool, font: ImageFont,
                          align: str, **kwargs):
@@ -453,6 +458,11 @@ def bbox_text_truncation(bbox_size: tuple, line_spacing: int, text: str, split_w
             break
         else:
             columns += -1
+
+    # if loop completed with columns == 0 (can happen if break_long_words=False)
+    # then the combination does not work
+    if columns == 0:
+        return False, []
 
     # determine number of lines
     lines = len(test_text)

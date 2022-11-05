@@ -63,6 +63,18 @@ def test_bbox_text_no_truncation():
     assert flip_sign.helpers.bbox_text_no_truncation(bbox_size=full_sign_size, line_spacing=1, text=text,
                                                      split_words=True, font=font_1, align='left') == answer
 
+    # test the use of break_long_words=False and True
+    font_5 = ImageFont.truetype(press_start_path, size=9)
+    answer = (True, ['Boulde', 'r'])
+    text = 'Boulder'
+    assert flip_sign.helpers.bbox_text_no_truncation(bbox_size=weather_stub_size, line_spacing=1, text=text,
+                                                     split_words=False, font=font_5, align='left') == answer
+
+    answer = (False, [])
+    assert flip_sign.helpers.bbox_text_no_truncation(bbox_size=weather_stub_size, line_spacing=1, text=text,
+                                                     split_words=False, font=font_5, align='left',
+                                                     break_long_words=False) == answer
+
 
 def test_bbox_text_truncation():
     # same testa as without truncation, just the answers are different.
@@ -131,3 +143,15 @@ def test_bbox_text_truncation():
     answer = (True, ['Split_words is essent', 'ial with long words'])
     assert flip_sign.helpers.bbox_text_truncation(bbox_size=full_sign_size, line_spacing=1, text=text,
                                                   split_words=True, font=font_1, align='left') == answer
+
+    # test the use of break_long_words=False and True
+    font_5 = ImageFont.truetype(press_start_path, size=9)
+    answer = (True, ['Boulde', 'r'])
+    text = 'Boulder'
+    assert flip_sign.helpers.bbox_text_truncation(bbox_size=weather_stub_size, line_spacing=1, text=text,
+                                                     split_words=False, font=font_5, align='left') == answer
+
+    answer = (False, [])
+    assert flip_sign.helpers.bbox_text_truncation(bbox_size=weather_stub_size, line_spacing=1, text=text,
+                                                     split_words=False, font=font_5, align='left',
+                                                     break_long_words=False) == answer
