@@ -149,9 +149,28 @@ def test_bbox_text_truncation():
     answer = (True, ['Boulde', 'r'])
     text = 'Boulder'
     assert flip_sign.helpers.bbox_text_truncation(bbox_size=weather_stub_size, line_spacing=1, text=text,
-                                                     split_words=False, font=font_5, align='left') == answer
+                                                  split_words=False, font=font_5, align='left') == answer
 
     answer = (False, [])
     assert flip_sign.helpers.bbox_text_truncation(bbox_size=weather_stub_size, line_spacing=1, text=text,
-                                                     split_words=False, font=font_5, align='left',
-                                                     break_long_words=False) == answer
+                                                  split_words=False, font=font_5, align='left',
+                                                  break_long_words=False) == answer
+
+
+def test_check_bbox_no_wrap():
+    # test a message that barely fits
+    full_sign_size = (168, 21)
+    text = "\n".join(['You wrote a note with chalk on my door,',
+                      "a message I'd known long before:",
+                     "'On any given day you'll find me gone'"])
+    answer = (True, text)
+    font_1 = ImageFont.truetype(dat_dot_path, size=8)
+    assert flip_sign.helpers.check_bbox_no_wrap(bbox_size=full_sign_size, line_spacing=-2, text=text,
+                                                font=font_1, align='center') == answer
+
+    # test a message that does not fit
+    font_2 = ImageFont.truetype(press_start_path, size=8)
+    text = "My text is too big.  My text is TOO BIG."
+    answer = (False, [])
+    assert flip_sign.helpers.check_bbox_no_wrap(bbox_size=full_sign_size, line_spacing=1, text=text,
+                                                font=font_2, align='center') == answer

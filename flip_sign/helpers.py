@@ -482,3 +482,34 @@ def bbox_text_truncation(bbox_size: tuple, line_spacing: int, text: str, split_w
             return True, test_text
         else:
             lines += -1
+
+
+def check_bbox_no_wrap(bbox_size: tuple, line_spacing: int, text: str, font: ImageFont, align: str, **kwargs):
+    """
+    This function replaces bbox_text_truncation and bbox_text_no_truncation when wrap_text=False.  The wrap_text=False
+    option is intended to allow custom line breaks / phrasing in the text.  In this scenario, newline characters are
+    expected in text, as necessary to make the message fit.  Since no word wrapping is performed, this function simply
+    checks if the message fits and returns that answer, along with the message unchanged.
+
+    :param bbox_size: (tuple) the bounding box the text must fit in
+    :param line_spacing: (int) the line spacing, passed to PIL.ImageDraw.Draw.multiline_text
+    :param text: (str or list) the text to be fit into the box
+    :param font: (PIL.ImageFont) the font to be used
+    :param align: ('left', 'center', 'right') the text alignment
+    :param kwargs: (dict) not used, added in arguments to allow for drop-in replacement with other functions
+    :return: (fits, wrapped_text):
+            fits: (Boolean) whether the message fits
+            wrapped_text: (str or list) in this case, the original message unchanged
+    """
+
+    # call text_bbox_size to check the size
+    check_size, _ = text_bbox_size(font=font, text=text, line_spacing=line_spacing, align=align)
+
+    # check if the text fits and set appropriate text return
+    fits = check_size[0] < bbox_size[0] and check_size[1] < bbox_size[1]
+    if fits:
+        text_return = text
+    else:
+        text_return = []
+
+    return fits, text_return
