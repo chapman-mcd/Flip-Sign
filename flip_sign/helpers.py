@@ -7,6 +7,8 @@ from PIL import ImageFont, ImageDraw, Image
 import gzip
 import re
 import textwrap
+from collections import namedtuple
+import math
 
 logger_name = 'flip_sign.helpers'
 
@@ -513,3 +515,125 @@ def check_bbox_no_wrap(bbox_size: tuple, line_spacing: int, text: str, font: Ima
         text_return = []
 
     return fits, text_return
+
+
+# define namedtuple to hold text wrap parameters
+wrap_parameter_set = namedtuple('wrap_parameter_set',
+                                ['font_path', 'font_size', 'min_spacing', 'split_words', 'truncate', 'wrap_kwargs'],
+                                defaults=[None, None, False, None, False, {}])
+
+def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str | list, center_vertical: bool,
+                              center_horizontal: bool, align: str, fixed_spacing: int = None, wrap_text: bool = True):
+    """
+    Draws text in a box of bbox_size, iterating through text parameters in params_order until one works.  If none work,
+    text is drawn using the last set of parameters, as much as can fit, and an event is written to the log.
+
+    :param params_order: (tuple) a sequence of text_parameter_set namedtuples, in order of preference
+    :param bbox_size: (tuple) the bounding box the text must fit in
+    :param text: (str or list) the text to be fit into the box
+    :param center_vertical: (Boolean) whether to center the output vertically
+    :param center_horizontal: (Boolean) whether to center the output horizontally
+    :param align: ('left', 'center', 'right') the text alignment
+    :param fixed_spacing: (int, default None) an optional fixed line spacing to use for consistency between draws
+    :param wrap_text: (Boolean, default True) whether to wrap the text before attempting to draw it in the bounding box
+    :return: (PIL.Image) the text, drawn in the bounding box with the highest-preference parameters possible
+    """
+
+    for wrap_parameters in params_order:
+        # select appropriate bbox function
+        if not wrap_text:
+            bbox_func = check_bbox_no_wrap
+        elif wrap_parameters.truncate:
+            bbox_func = bbox_text_truncation
+        else:
+            bbox_func = bbox_text_no_truncation
+
+        # apply fixed spacing if specified
+        if fixed_spacing is not None:
+            line_spacing = fixed_spacing
+        else:
+            line_spacing = wrap_parameters.min_spacing
+
+        font = ImageFont.truetype(wrap_parameters.font_path, size=wrap_parameters.font_size)
+        fits, wrapped = bbox_func(bbox_size=bbox_size, line_spacing=line_spacing, text=text,
+                                  split_words=wrap_parameters.split_words, font=font, align=align)
+
+        if fits:
+            break
+
+    if not fits:
+        log_msg = "draw_text_best_parameters reached end of params_order without fitting, text: " + text
+        logging.getLogger(logger_name).warning(log_msg)
+        # if does not fit, draw message with last parameters in list
+        if isinstance(text, list):
+            wrapped = "\n".join(text)
+        else:
+            wrapped = text
+
+    # at this point 'wrapped' could either be type str or list.  make sure it is type str from here on
+    if isinstance(wrapped, list):
+        wrapped = "\n".join(wrapped)
+
+    min_text_size, min_draw_target = text_bbox_size(font=font, text=wrapped, line_spacing=line_spacing, align=align)
+
+    # now expand text to fit the sign space in a visually pleasing way
+    # calculate initial parameters for spacing out the text (and defaults to be used if no solution found)
+    num_whitespace_breaks = wrapped.count("\n") + 2
+    extra_lines = bbox_size[1] - min_text_size[1]
+    spacing_to_add = 0
+
+    # this section allocates the whitespace within multiline text
+    # only runs if there are more than 2 breaks (e.g. more than one line) and we are not using fixed_spacing
+    if num_whitespace_breaks > 2 and fixed_spacing is None:
+        # determine if there is enough whitespace for all breaks to get one more line.  only execute if so.
+        whitespace_per_break = extra_lines / num_whitespace_breaks
+        if whitespace_per_break >= 1:
+            # calculate how much more whitespace we want within the text.  round it up to space out slightly more
+            new_whitespace_within = math.ceil(whitespace_per_break * (extra_lines - 2))
+
+            # iterate, adding to line_spacing until we have added the desired whitespace
+            for i in range(extra_lines):
+                text_size, draw_target = text_bbox_size(font=font, text=wrapped, line_spacing=line_spacing + i,
+                                                        align=align)
+                # check if we have added the desired amount of whitespace
+                if text_size[1] - min_text_size[1] >= new_whitespace_within:
+                    # act appropriately - set parameters if the message still fits, otherwise reset
+                    if text_size[1] <= bbox_size[1]:
+                        spacing_to_add = i
+                    else:
+                        text_size = min_text_size
+                        draw_target = min_draw_target
+                    break
+        # if there is not enough whitespace to add, just set text_size and draw_target to min values
+        else:
+            text_size = min_text_size
+            draw_target = min_draw_target
+    # if we are using fixed spacing or there is only one line, just set text_size and draw_target to min values
+    else:
+        text_size = min_text_size
+        draw_target = min_draw_target
+
+    if fixed_spacing is not None:
+        final_line_spacing = fixed_spacing
+    else:
+        final_line_spacing = line_spacing + spacing_to_add
+
+    if center_vertical:
+        extra_lines = bbox_size[1] - text_size[1]
+        draw_target = list(draw_target)  # draw target provided as tuple from function, now needs to be mutable
+        draw_target[1] += extra_lines // 2
+
+    if center_horizontal:
+        extra_cols = bbox_size[0] - text_size[0]
+        draw_target = list(draw_target)  # draw target provided as tuple from function, now needs to be mutable
+        draw_target[0] += extra_cols // 2
+
+    # draw the image using the final parameters
+    image = Image.new(mode='1', size=bbox_size, color=0)
+    ImageDraw.Draw(image).multiline_text(draw_target, text=wrapped, spacing=final_line_spacing, font=font, fill=1,
+                                         anchor='la', align=align)
+
+    return image
+
+
+
