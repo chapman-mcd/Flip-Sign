@@ -536,7 +536,10 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
     :param align: ('left', 'center', 'right') the text alignment
     :param fixed_spacing: (int, default None) an optional fixed line spacing to use for consistency between draws
     :param wrap_text: (Boolean, default True) whether to wrap the text before attempting to draw it in the bounding box
-    :return: (PIL.Image) the text, drawn in the bounding box with the highest-preference parameters possible
+    :return: image, params, spacing (tuple):
+                image: (PIL.Image): the text, drawn in the bounding box with the highest-preference parameters possible
+                params: (text_parameter_set namedtuple): the text parameters used to draw the image
+                spacing: (int): the line spacing used with ImageDraw.Draw.multiline_text
     """
 
     for wrap_parameters in params_order:
@@ -556,7 +559,8 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
 
         font = ImageFont.truetype(wrap_parameters.font_path, size=wrap_parameters.font_size)
         fits, wrapped = bbox_func(bbox_size=bbox_size, line_spacing=line_spacing, text=text,
-                                  split_words=wrap_parameters.split_words, font=font, align=align)
+                                  split_words=wrap_parameters.split_words, font=font, align=align,
+                                  **wrap_parameters.wrap_kwargs)
 
         if fits:
             break
@@ -589,7 +593,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
         whitespace_per_break = extra_lines / num_whitespace_breaks
         if whitespace_per_break >= 1:
             # calculate how much more whitespace we want within the text.  round it up to space out slightly more
-            new_whitespace_within = math.ceil(whitespace_per_break * (extra_lines - 2))
+            new_whitespace_within = math.ceil(whitespace_per_break * (num_whitespace_breaks - 2))
 
             # iterate, adding to line_spacing until we have added the desired whitespace
             for i in range(extra_lines):
@@ -633,7 +637,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
     ImageDraw.Draw(image).multiline_text(draw_target, text=wrapped, spacing=final_line_spacing, font=font, fill=1,
                                          anchor='la', align=align)
 
-    return image
+    return image, wrap_parameters, final_line_spacing
 
 
 
