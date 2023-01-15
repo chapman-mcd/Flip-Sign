@@ -522,6 +522,7 @@ wrap_parameter_set = namedtuple('wrap_parameter_set',
                                 ['font_path', 'font_size', 'min_spacing', 'split_words', 'truncate', 'wrap_kwargs'],
                                 defaults=[None, None, False, None, False, {}])
 
+
 def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str | list, center_vertical: bool,
                               center_horizontal: bool, align: str, fixed_spacing: int = None, wrap_text: bool = True):
     """
@@ -638,6 +639,3 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
                                          anchor='la', align=align)
 
     return image, wrap_parameters, final_line_spacing
-
-
-
