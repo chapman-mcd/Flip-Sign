@@ -20,13 +20,11 @@ def test_api_cache_ttu():
     assert location_ttu == time_now + 30 * 24 * 60 * 60 # cache location lookup results for 30 days
 
 # Tests the logging feature for the TTU function
-logging_mock = MagicMock()
-@patch("logging.getLogger", logging_mock)
-def test_api_cache_ttu_logging():
+def test_api_cache_ttu_logging(caplog):
     time_now = time.monotonic()
     other_ttu = flip_sign.helpers.accuweather_cache_ttu(_key=('http://www.yourmom.com',), value=None, now=time_now)
-    logging_mock('flip_sign.helpers').warning.assert_called_with("Unhandled URL type for AccuWeather Cache.  Url: " +
-                                                                 'http://www.yourmom.com')
+    assert caplog.records[-1].getMessage() == "Unhandled URL type for AccuWeather Cache.  Url: " +\
+           'http://www.yourmom.com'
     assert other_ttu == time_now + 10 * 60
 
 test_location = "36.252304,-85.710587" # Nameless, Tennessee

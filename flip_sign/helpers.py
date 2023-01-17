@@ -11,6 +11,7 @@ from collections import namedtuple
 import math
 
 logger_name = 'flip_sign.helpers'
+helper_logger = logging.getLogger(logger_name)
 
 
 def accuweather_cache_ttu(_key, value, now):
@@ -35,7 +36,7 @@ def accuweather_cache_ttu(_key, value, now):
         increment = 30 * 24 * 60 * 60  # store location requests for 30 days
     else:
         # if a different URL is passed, write to the log and cache for 10 minutes only
-        logging.getLogger(logger_name).warning("Unhandled URL type for AccuWeather Cache.  Url: " + key_str)
+        helper_logger.warning("Unhandled URL type for AccuWeather Cache.  Url: " + key_str)
         increment = 10 * 60
 
     return now + increment
@@ -568,7 +569,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
 
     if not fits:
         log_msg = "draw_text_best_parameters reached end of params_order without fitting, text: " + text
-        logging.getLogger(logger_name).warning(log_msg)
+        helper_logger.warning(log_msg)
         # if does not fit, draw message with last parameters in list
         if isinstance(text, list):
             wrapped = "\n".join(text)

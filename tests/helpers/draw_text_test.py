@@ -1,8 +1,6 @@
 import flip_sign.helpers as hlp
-from PIL import Image, ImageChops
-from unittest.mock import patch, MagicMock
+from PIL import Image
 import hashlib
-import os
 
 press_start_path = r'../flip_sign/assets/fonts/PressStart2P.ttf'
 dat_dot_path = r'../flip_sign/assets/fonts/DatDot_edited_v1.ttf'
@@ -19,17 +17,15 @@ def image_equal(image_1, image_2):
     """
     Compares two images and returns a boolean indicating if they are the same image.
 
-    :param path_1: (PIL.Image) left image
-    :param path_2: (PIL.Image) right image
+    :param image_1: (PIL.Image) left image
+    :param image_2: (PIL.Image) right image
     :return: equal: (bool) whether the images are the same
     """
 
     return hashlib.sha512(image_1.tobytes()).hexdigest() == hashlib.sha512(image_2.tobytes()).hexdigest()
 
 
-logging_mock = MagicMock()
-@patch("logging.getLogger", logging_mock)
-def test_draw_text_best_parameters():
+def test_draw_text_best_parameters(caplog):
     full_sign_size = (168, 21)
     # test a long message using wrap_text=False
     text = "\n".join(['You wrote a note with chalk on my door,',
@@ -117,7 +113,6 @@ def test_draw_text_best_parameters():
         assert test[1] == default_wrap_parameters[2]
         assert test[2] == 3
 
-
     # test a message that fits in a large font
     text = "A doo-da-ee!!"
     with Image.open("./helpers/test_assets/Test_07.png") as answer:
@@ -133,10 +128,9 @@ def test_draw_text_best_parameters():
 
     # test a message that does not fit, with wrap_text=False (gets to end of params_order)
     # check message written matches and also that a message is written to the log
-    text = "O mar ta bonito ta cheio de caminho pedala\npedala pedala pedalinho. me leva pra longe bem\ndevagarinho lorem ipsum lorem ipsum lorem ipsum"
-    #text = "\n".join(["O mar ta bonito ta cheio de caminho pedala",
-    #                  "pedala pedala pedalinho. me leva pra longe bem",
-    #                  "devagarinho lorem ipsum lorem ipsum lorem ipsum"])
+    text = "\n".join(["O mar ta bonito ta cheio de caminho pedala",
+                      "pedala pedala pedalinho. me leva pra longe bem",
+                      "devagarinho lorem ipsum lorem ipsum lorem ipsum"])
     log_text = "draw_text_best_parameters reached end of params_order without fitting, text: " + text
     with Image.open("./helpers/test_assets/Test_08.png") as answer:
         out_path = "./helpers/test_output/Test_08.png"
@@ -148,7 +142,7 @@ def test_draw_text_best_parameters():
             assert image_equal(answer, test_result)
         assert test[1] == default_wrap_parameters[5]
         assert test[2] == -1
-    logging_mock('flip_sign.helpers').warning.assert_called_with(log_text)
+    assert caplog.records[-1].getMessage() == log_text
 
     # test simple weather stub at large size
     weather_stub_size = (58, 21)
