@@ -187,3 +187,15 @@ def test_draw_text_best_parameters(caplog):
             assert image_equal(answer, test_result)
         assert test[1] == custom_wrap_parameters_2[2]
         assert test[2] == -2
+
+def test_draw_text_parameters_log_error():
+    # previously if a list was provided and the message did not fit, the log errored out
+    date_message_wrap_params = hlp.wrap_parameter_set(font_path=press_start_path, font_size=9, min_spacing=1,
+                                                      split_words=False, truncate=True, wrap_kwargs={})
+    date_message_text_kws = {'params_order': [date_message_wrap_params],
+                             'center_vertical': True, 'center_horizontal': True, 'align': 'center',
+                             'fixed_spacing': 1, 'wrap_text': False}
+    msg = ["123456789012345 2mo", "ABCDEFGHIJKLMNO 14d"]
+
+    # next line originally returned error due to issue in log writing
+    _, _, _ = hlp.draw_text_best_parameters(text=msg, bbox_size=(168,21), **date_message_text_kws)

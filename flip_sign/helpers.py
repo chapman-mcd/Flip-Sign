@@ -568,7 +568,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
             break
 
     if not fits:
-        log_msg = "draw_text_best_parameters reached end of params_order without fitting, text: " + text
+        log_msg = "draw_text_best_parameters reached end of params_order without fitting, text: " + str(text)
         helper_logger.warning(log_msg)
         # if does not fit, draw message with last parameters in list
         if isinstance(text, list):
