@@ -524,8 +524,8 @@ wrap_parameter_set = namedtuple('wrap_parameter_set',
                                 defaults=[None, None, False, None, False, {}])
 
 
-def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str | list, center_vertical: bool,
-                              center_horizontal: bool, align: str, fixed_spacing: int = None, wrap_text: bool = True):
+def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str | list, vertical_align: bool,
+                              horizontal_align: bool, align: str, fixed_spacing: int = None, wrap_text: bool = True):
     """
     Draws text in a box of bbox_size, iterating through text parameters in params_order until one works.  If none work,
     text is drawn using the last set of parameters, as much as can fit, and an event is written to the log.
@@ -533,8 +533,8 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
     :param params_order: (tuple) a sequence of text_parameter_set namedtuples, in order of preference
     :param bbox_size: (tuple) the bounding box the text must fit in
     :param text: (str or list) the text to be fit into the box
-    :param center_vertical: (Boolean) whether to center the output vertically
-    :param center_horizontal: (Boolean) whether to center the output horizontally
+    :param vertical_align: (Boolean) whether to center the output vertically
+    :param horizontal_align: (Boolean) whether to center the output horizontally
     :param align: ('left', 'center', 'right') the text alignment
     :param fixed_spacing: (int, default None) an optional fixed line spacing to use for consistency between draws
     :param wrap_text: (Boolean, default True) whether to wrap the text before attempting to draw it in the bounding box
@@ -624,12 +624,12 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
     else:
         final_line_spacing = line_spacing + spacing_to_add
 
-    if center_vertical:
+    if vertical_align:
         extra_lines = bbox_size[1] - text_size[1]
         draw_target = list(draw_target)  # draw target provided as tuple from function, now needs to be mutable
         draw_target[1] += extra_lines // 2
 
-    if center_horizontal:
+    if horizontal_align:
         extra_cols = bbox_size[0] - text_size[0]
         draw_target = list(draw_target)  # draw target provided as tuple from function, now needs to be mutable
         draw_target[0] += extra_cols // 2

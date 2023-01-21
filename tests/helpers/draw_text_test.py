@@ -34,7 +34,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_01.png") as answer:
         out_path = "./helpers/test_output/Test_01.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=True, align='center',
+                                             vertical_align=True, horizontal_align=True, align='center',
                                              fixed_spacing=None, wrap_text=False)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -47,7 +47,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_02.png") as answer:
         out_path = "./helpers/test_output/Test_02.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=True, align='center',
+                                             vertical_align=True, horizontal_align=True, align='center',
                                              fixed_spacing=1, wrap_text=False)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -60,7 +60,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_03.png") as answer:
         out_path = "./helpers/test_output/Test_03.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=True, align='center',
+                                             vertical_align=True, horizontal_align=True, align='center',
                                              fixed_spacing=1, wrap_text=False)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -80,7 +80,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_04.png") as answer:
         out_path = "./helpers/test_output/Test_04.png"
         test = hlp.draw_text_best_parameters(params_order=custom_wrap_parameters_1, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=True, align='center',
+                                             vertical_align=True, horizontal_align=True, align='center',
                                              fixed_spacing=None, wrap_text=True)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -92,7 +92,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_05.png") as answer:
         out_path = "./helpers/test_output/Test_05.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=True, align='center',
+                                             vertical_align=True, horizontal_align=True, align='center',
                                              fixed_spacing=None, wrap_text=True)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -105,7 +105,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_06.png") as answer:
         out_path = "./helpers/test_output/Test_06.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=True, align='center',
+                                             vertical_align=True, horizontal_align=True, align='center',
                                              fixed_spacing=None, wrap_text=True)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -118,7 +118,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_07.png") as answer:
         out_path = "./helpers/test_output/Test_07.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=True, align='center',
+                                             vertical_align=True, horizontal_align=True, align='center',
                                              fixed_spacing=None, wrap_text=True)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -135,7 +135,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_08.png") as answer:
         out_path = "./helpers/test_output/Test_08.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
-                                             center_vertical=True, center_horizontal=False, align='left',
+                                             vertical_align=True, horizontal_align=False, align='left',
                                              fixed_spacing=None, wrap_text=False)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -150,7 +150,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_09.png") as answer:
         out_path = "./helpers/test_output/Test_09.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=weather_stub_size,
-                                             text=text, center_vertical=True, center_horizontal=True, align='left',
+                                             text=text, vertical_align=True, horizontal_align=True, align='left',
                                              fixed_spacing=None, wrap_text=False)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -163,7 +163,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_10.png") as answer:
         out_path = "./helpers/test_output/Test_10.png"
         test = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=weather_stub_size,
-                                             text=text, center_vertical=True, center_horizontal=False, align='left',
+                                             text=text, vertical_align=True, horizontal_align=False, align='left',
                                              fixed_spacing=None, wrap_text=True)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -180,7 +180,7 @@ def test_draw_text_best_parameters(caplog):
     with Image.open("./helpers/test_assets/Test_11.png") as answer:
         out_path = "./helpers/test_output/Test_11.png"
         test = hlp.draw_text_best_parameters(params_order=custom_wrap_parameters_2, bbox_size=weather_stub_size,
-                                             text=text, center_vertical=True, center_horizontal=True, align='left',
+                                             text=text, vertical_align=True, horizontal_align=True, align='left',
                                              fixed_spacing=None, wrap_text=True)
         test[0].save(out_path)
         with Image.open(out_path) as test_result:
@@ -193,7 +193,7 @@ def test_draw_text_parameters_log_error():
     date_message_wrap_params = hlp.wrap_parameter_set(font_path=press_start_path, font_size=9, min_spacing=1,
                                                       split_words=False, truncate=True, wrap_kwargs={})
     date_message_text_kws = {'params_order': [date_message_wrap_params],
-                             'center_vertical': True, 'center_horizontal': True, 'align': 'center',
+                             'vertical_align': True, 'horizontal_align': True, 'align': 'center',
                              'fixed_spacing': 1, 'wrap_text': False}
     msg = ["123456789012345 2mo", "ABCDEFGHIJKLMNO 14d"]
 
