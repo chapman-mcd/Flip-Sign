@@ -2,6 +2,7 @@ import logging
 from urllib.request import Request, urlopen
 import datetime as dt
 from cachetools import cached, TLRUCache
+from typing import Union, Literal
 import json
 from PIL import ImageFont, ImageDraw, Image
 import gzip
@@ -524,8 +525,11 @@ wrap_parameter_set = namedtuple('wrap_parameter_set',
                                 defaults=[None, None, False, None, False, {}])
 
 
-def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str | list, vertical_align: bool,
-                              horizontal_align: bool, align: str, fixed_spacing: int = None, wrap_text: bool = True):
+def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str | list,
+                              vertical_align: Union[Literal['center'], int] = 'center',
+                              horizontal_align: Union[Literal['center'], int] = 'center',
+                              text_align: Literal['left', 'center', 'right'] = 'center', fixed_spacing: int = None,
+                              wrap_text: bool = True):
     """
     Draws text in a box of bbox_size, iterating through text parameters in params_order until one works.  If none work,
     text is drawn using the last set of parameters, as much as can fit, and an event is written to the log.
@@ -533,9 +537,9 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
     :param params_order: (tuple) a sequence of text_parameter_set namedtuples, in order of preference
     :param bbox_size: (tuple) the bounding box the text must fit in
     :param text: (str or list) the text to be fit into the box
-    :param vertical_align: (Boolean) whether to center the output vertically
-    :param horizontal_align: (Boolean) whether to center the output horizontally
-    :param align: ('left', 'center', 'right') the text alignment
+    :param vertical_align: (int or 'center') number of pixels to offset the image down, or 'center' to center
+    :param horizontal_align: (int or 'center') number of pixels to offset the image right, or 'center' to center
+    :param text_align: ('left', 'center', 'right') the text alignment
     :param fixed_spacing: (int, default None) an optional fixed line spacing to use for consistency between draws
     :param wrap_text: (Boolean, default True) whether to wrap the text before attempting to draw it in the bounding box
     :return: image, params, spacing (tuple):
@@ -561,7 +565,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
 
         font = ImageFont.truetype(wrap_parameters.font_path, size=wrap_parameters.font_size)
         fits, wrapped = bbox_func(bbox_size=bbox_size, line_spacing=line_spacing, text=text,
-                                  split_words=wrap_parameters.split_words, font=font, align=align,
+                                  split_words=wrap_parameters.split_words, font=font, align=text_align,
                                   **wrap_parameters.wrap_kwargs)
 
         if fits:
@@ -580,7 +584,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
     if isinstance(wrapped, list):
         wrapped = "\n".join(wrapped)
 
-    min_text_size, min_draw_target = text_bbox_size(font=font, text=wrapped, line_spacing=line_spacing, align=align)
+    min_text_size, min_draw_target = text_bbox_size(font=font, text=wrapped, line_spacing=line_spacing, align=text_align)
 
     # now expand text to fit the sign space in a visually pleasing way
     # calculate initial parameters for spacing out the text (and defaults to be used if no solution found)
@@ -600,7 +604,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
             # iterate, adding to line_spacing until we have added the desired whitespace
             for i in range(extra_lines):
                 text_size, draw_target = text_bbox_size(font=font, text=wrapped, line_spacing=line_spacing + i,
-                                                        align=align)
+                                                        align=text_align)
                 # check if we have added the desired amount of whitespace
                 if text_size[1] - min_text_size[1] >= new_whitespace_within:
                     # act appropriately - set parameters if the message still fits, otherwise reset
@@ -624,19 +628,33 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
     else:
         final_line_spacing = line_spacing + spacing_to_add
 
-    if vertical_align:
-        extra_lines = bbox_size[1] - text_size[1]
-        draw_target = list(draw_target)  # draw target provided as tuple from function, now needs to be mutable
-        draw_target[1] += extra_lines // 2
+    extra_lines = bbox_size[1] - text_size[1]
+    extra_cols = bbox_size[0] - text_size[0]
+    draw_target = list(draw_target)  # draw target provided as tuple from function, now needs to be mutable
 
-    if horizontal_align:
-        extra_cols = bbox_size[0] - text_size[0]
-        draw_target = list(draw_target)  # draw target provided as tuple from function, now needs to be mutable
+    if vertical_align == 'center':
+        draw_target[1] += extra_lines // 2
+    elif isinstance(vertical_align, int):
+        draw_target[1] += vertical_align
+        if vertical_align > extra_lines > 0:
+            helper_logger.warning("Vertical align provided pushes drawn text off image.  Text:" + str(text))
+    else:
+        helper_logger.error("Vertical align must be 'center' or int.  Text:" + str(text))
+        raise ValueError("Vertical_align must be 'center' or int.")
+
+    if horizontal_align == 'center':
         draw_target[0] += extra_cols // 2
+    elif isinstance(horizontal_align, int):
+        draw_target[0] += horizontal_align
+        if horizontal_align > extra_cols > 0:
+            helper_logger.warning("Horizontal align provided pushes drawn text off image.  Text:" + str(text))
+    else:
+        helper_logger.error("Horizontal align must be 'center' or int.  Text:" + str(text))
+        raise ValueError("Horizontal_align must be 'center' or int.")
 
     # draw the image using the final parameters
     image = Image.new(mode='1', size=bbox_size, color=0)
     ImageDraw.Draw(image).multiline_text(draw_target, text=wrapped, spacing=final_line_spacing, font=font, fill=1,
-                                         anchor='la', align=align)
+                                         anchor='la', align=text_align)
 
     return image, wrap_parameters, final_line_spacing

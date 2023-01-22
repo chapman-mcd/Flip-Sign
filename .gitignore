@@ -1,6 +1,9 @@
 flip_sign/assets/fonts/**
 flip_sign/assets/keys/**
 flip_sign/assets/cache/**
+tests/assets/fonts/**
+tests/assets/keys/**
+tests/assets/cache/**
 .DS_Store
 .idea/
 __pycache__/
