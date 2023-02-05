@@ -53,7 +53,7 @@ class Message(object):
         return self.image
 
 
-def linear_decline_frequency_image_message(image_argument):
+def linear_decline_frequency_image_message(image_argument: Union[Path, Image.Image]):
     """
     For pathlib.path images, this function provides a linearly declining probability starting at 100% for the first
     month and declining to 25% after just ovr 1 year.  For PIL.Image arguments, provides 50% for all.
@@ -75,7 +75,8 @@ class ImageMessage(Message):
     """
     A message composed of a single static image, the same size as the sign (168 x 21).
     """
-    def __init__(self, image: Union[Path, Image.Image], frequency: Union[float, callable] = linear_decline_frequency_image_message):
+    def __init__(self, image: Union[Path, Image.Image],
+                 frequency: Union[float, callable] = linear_decline_frequency_image_message):
         """
         Initializes the message.
 
@@ -135,7 +136,7 @@ class ImageMessage(Message):
         pass
 
 
-def linear_decline_frequency_date_message(days):
+def linear_decline_frequency_date_message(days: float):
     """
     This message is intended as the default frequency for date messages.  It maxes at 100% probability of display
     for messages occurring in less than 30 days, and hits a minimum of 10% probability at about a year out.
