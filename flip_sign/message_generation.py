@@ -301,3 +301,39 @@ class RecurringFixedDateMessage(DateMessage):
             next_end = self.base_end.replace(year=now.year)
 
         return next_start, next_end, self.all_day
+
+
+class RecurringVariableDateMessage(DateMessage):
+    """
+    A class for events which recur on different dates depending on the year (e.g. Easter, Ramadan)
+    """
+    def __init__(self, description: str, next_dates_func: callable, all_day: bool,
+                 frequency: Union[float, callable] = linear_decline_frequency_date_message):
+        """
+        Initializes the message.
+
+        :param description: (str): the text which describes the event.
+        :param next_dates_func: (callable): function which returns a tuple (start, end) of the next occurrence
+        :param all_day: (bool): whether the event is an all-day event
+        :param frequency: (callable or float):  if float, the chance the message will display.
+                                            if callable, single argument is number of days until event start (float)
+        """
+
+        self.description = description
+        self.next_dates_func = next_dates_func
+        self.all_day = all_day
+        self.draw_text_kws = date_message_text_kws
+
+        super().__init__(frequency)
+
+    def next_occurrence(self):
+        """
+        Returns the next occurrence of the event.
+
+        :return: next_start, next_end, all_day:
+                next_start: (datetime.datetime): the start of the next occurrence
+                next_end: (datetime.datetime): the end of the next occurrence
+                all_day: (bool): whether the next occurrence is an all-day event
+        """
+
+        return *self.next_dates_func(), self.all_day
