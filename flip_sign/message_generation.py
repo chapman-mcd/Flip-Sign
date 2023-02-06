@@ -1,6 +1,7 @@
 from PIL import Image, UnidentifiedImageError
 from pathlib import Path
 from typing import Union
+from itertools import zip_longest
 import textwrap
 import flip_sign.helpers as hlp
 import random
@@ -151,7 +152,7 @@ def linear_decline_frequency_date_message(days: float):
 date_message_wrap_params = hlp.wrap_parameter_set(font_path=press_start_path, font_size=9, min_spacing=1,
                                                   split_words=False, truncate=True, wrap_kwargs={})
 date_message_text_kws = {'params_order': [date_message_wrap_params],
-                         'vertical_align': 'center', 'horizontal_align': 3, 'text_align': 'left',
+                         'vertical_align': 1, 'horizontal_align': 3, 'text_align': 'left',
                          'fixed_spacing': 1, 'wrap_text': False}
 
 
@@ -198,9 +199,9 @@ class DateMessage(Message):
         """
 
         next_start, next_end, all_day = self.next_occurrence()
-        formatted_timedelta = hlp.countdown_format(target_start=next_start, target_end=next_end, all_day=all_day)
-        description_wrapped = textwrap.wrap(text=self.description, width=14, placeholder=" {}", max_lines=2)
-        final_message = ['{:<15}'.format(text) + time for text, time in zip(description_wrapped, formatted_timedelta)]
+        time_strs = hlp.countdown_format(target_start=next_start, target_end=next_end, all_day=all_day)
+        desc_strs = textwrap.wrap(text=self.description, width=14, placeholder=" {}", max_lines=2)
+        final_message = ['{:<15}'.format(text) + time for text, time in zip_longest(desc_strs, time_strs, fillvalue='')]
         image, _, _ = hlp.draw_text_best_parameters(bbox_size=(168, 21), text=final_message, **self.draw_text_kws)
         self.final_message_wrapped = final_message
         self.image = image
@@ -250,3 +251,53 @@ class EphemeralDateMessage(DateMessage):
         """
 
         return self.start, self.end, self.all_day
+
+
+class RecurringFixedDateMessage(DateMessage):
+    """
+    A class for date messages which recur on the same calendar date every year (e.g. New Year's Day on January 1st)
+    """
+    def __init__(self, description: str, base_date_start: datetime.datetime, base_date_end: datetime.datetime,
+                 all_day: bool, frequency: Union[float, callable] = linear_decline_frequency_date_message):
+        """
+        Initializes the message.
+
+        :param description: (str): the text which describes the event.
+        :param base_date_start: (datetime.datetime): when the event starts, in an arbitrary year.
+        :param base_date_end: (datetime.datetime): when the event ends, in the same year as base_date_start
+        :param all_day: (bool): whether the event is an all-day event
+        :param frequency: (callable or float):  if float, the chance the message will display.
+                                        if callable, single argument is number of days until event start (float)
+        """
+        self.description = description
+        self.base_start = base_date_start
+        self.base_end = base_date_end
+        self.all_day = all_day
+        self.draw_text_kws = date_message_text_kws
+
+        if all_day:
+            self.base_end = self.base_end.replace(hour=23, minute=59, second=59)
+
+        super().__init__(frequency)
+
+    def next_occurrence(self):
+        """
+        Returns the next occurrence of the event.
+
+        :return: next_start, next_end, all_day:
+                next_start: (datetime.datetime): the start of the next occurrence
+                next_end: (datetime.datetime): the end of the next occurrence
+                all_day: (bool): whether the next occurrence is an all-day event
+        """
+        now = datetime.datetime.now()
+
+        # if the event has already passed this year, use next year
+        if now > self.base_end.replace(year=now.year):
+            next_start = self.base_start.replace(year=now.year + 1)
+            next_end = self.base_end.replace(year=now.year + 1)
+        # if the event has not already passed this year, use this year
+        else:
+            next_start = self.base_start.replace(year=now.year)
+            next_end = self.base_end.replace(year=now.year)
+
+        return next_start, next_end, self.all_day
