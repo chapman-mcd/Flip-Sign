@@ -337,3 +337,61 @@ class RecurringVariableDateMessage(DateMessage):
         """
 
         return *self.next_dates_func(), self.all_day
+
+
+basic_text_default_wrap_params = (
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=16, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=12, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=9, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=8, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=True, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=True, truncate=True,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=True, truncate=True,
+                           wrap_kwargs={'placeholder': "."}),
+)
+
+
+class BasicTextMessage(Message):
+    """
+    A class for messages which are simple text.
+    """
+    def __init__(self, text: Union[str, list], font_parameters: Union[tuple, list] = basic_text_default_wrap_params,
+                 frequency: float = 0.9, **kwargs):
+        """
+        Initializes the message.
+
+        :param text: (str or list): the text to be displayed in the message
+        :param font_parameters: (tuple or list): a list or tuple of hlp.wrap_parameter_set objects, in preference order
+        :param frequency: (float): the probability that the message will display
+        :param kwargs: (captured as dict): passed to draw_text_best_parameters
+        """
+
+        self.text = text
+        self.font_parameters = font_parameters
+        self.draw_text_kwargs = kwargs
+        self.applied_spacing = None
+        self.applied_params = None
+
+        super().__init__(frequency=frequency)
+
+    def render(self):
+        """
+        Prepare the message for display.  Determine best parameters and save the image and resulting params.
+
+        :return: None
+        """
+
+        image, params, spacing = hlp.draw_text_best_parameters(params_order=self.font_parameters,
+                                                               bbox_size=(168, 21), text=self.text,
+                                                               **self.draw_text_kwargs)
+        self.image = image
+        self.applied_params = params
+        self.applied_spacing = spacing
