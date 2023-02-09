@@ -395,3 +395,22 @@ class BasicTextMessage(Message):
         self.image = image
         self.applied_params = params
         self.applied_spacing = spacing
+
+
+date_match_wrap_params = hlp.wrap_parameter_set(font_path=press_start_path, font_size=9, min_spacing=1,
+                                                split_words=False, truncate=True, wrap_kwargs={'placeholder': '{}'})
+
+
+class DateMatchTextMessage(BasicTextMessage):
+    """
+    A convenience class for creating text-only messages that 'match' with output from the DateMessage class
+    """
+    def __init__(self, text: str, frequency: float = 0.9):
+        """
+        Initializes the message.
+
+        :param text: (str or list): the text to be displayed in the message
+        :param frequency: (float): the probability that the message will display
+        """
+        super().__init__(text=text, font_parameters=[date_message_wrap_params], frequency=frequency, vertical_align=1,
+                         horizontal_align=3, text_align='left', fixed_spacing=1, wrap_text=True)
