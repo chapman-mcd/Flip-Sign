@@ -1,7 +1,8 @@
 from PIL import Image, UnidentifiedImageError
 from pathlib import Path
-from typing import Union
+from typing import Union, Literal
 from itertools import zip_longest
+from flip_sign.assets import keys
 import textwrap
 import flip_sign.helpers as hlp
 import random
@@ -414,3 +415,70 @@ class DateMatchTextMessage(BasicTextMessage):
         """
         super().__init__(text=text, font_parameters=[date_message_wrap_params], frequency=frequency, vertical_align=1,
                          horizontal_align=3, text_align='left', fixed_spacing=1, wrap_text=True)
+
+
+class AccuweatherDescription(BasicTextMessage):
+    """
+    A class to display the text description of the weather from the AccuWeather API
+    """
+    def __init__(self, location: dict, headline: bool = True, date: Union[datetime.datetime, datetime.date] = None,
+                 day_or_night: Literal['day', 'night'] = 'day',
+                 font_parameters: Union[tuple, list] = basic_text_default_wrap_params,
+                 frequency: float = 1.0, **kwargs):
+        """
+
+        :param location: (dict): a location response from the accuweather API
+        :param headline: (bool): whether to be a headline or date description.  if true, date and day/night are ignored
+        :param date: (datetime.datetime or datetime.date) the date for the description to be displayed
+        :param day_or_night: ('day' or 'night'): whether the description should be for day or night weather
+        :param font_parameters: (tuple or list): a list or tuple of hlp.wrap_parameter_set objects, in preference order
+        :param frequency: (float): the probability that the message will display
+        :param kwargs: kwargs: (captured as dict): passed to draw_text_best_parameters
+        """
+
+        self.location = location.copy()
+        self.headline = headline
+        # standardize type to datetime.date
+        # use attribute of hour to determine if date was passed as datetime
+        if hasattr(date, 'hour'):
+            date = date.date()
+        self.date = date
+        self.day_or_night = day_or_night.capitalize()
+
+        # initialize with blank text which will be replaced in the render method
+        super().__init__(text='', font_parameters=font_parameters, frequency=frequency, **kwargs)
+
+        if not self.headline and self.date is None:
+            self.display = False
+            message_gen_logger.warning("Improper WeatherDescription construction.  Location:" + str(location))
+
+    def render(self):
+
+        api_request = ('http://dataservice.accuweather.com/forecasts/v1/daily/5day/',
+                       self.location['Key'],
+                       '?apikey=',
+                       keys['AccuweatherAPI'],
+                       '&details=true',
+                       '&metric=true')
+        response = hlp.accuweather_api_request(api_request)  # no try/except here since errors should be handled above
+
+        if self.headline:
+            self.text = response['Headline']['Text']
+        else:
+            # humanize the date into today/tomorrow/ISO8601
+            if self.date == datetime.date.today():
+                date_text = "Today(" + self.day_or_night[0] + "): "
+            elif self.date == datetime.date.today() + datetime.timedelta(days=1):
+                date_text = "Tomorrow(" + self.day_or_night[0] + "): "
+            else:
+                date_text = self.date.isoformat() + "(" + self.day_or_night[0] + "): "
+
+            for forecast_day in response['DailyForecasts']:
+                if datetime.datetime.fromisoformat(forecast_day['Date']).date() == self.date:
+                    self.text = date_text + forecast_day[self.day_or_night]['LongPhrase']
+
+            # if we got here, the date was not in the API forecast response
+            if self.text == '':
+                raise ValueError("Weather Description Obj: Provided date not found in API response.")
+
+        super().render()
