@@ -2,7 +2,7 @@ from PIL import Image, UnidentifiedImageError
 from pathlib import Path
 from typing import Union, Literal
 from itertools import zip_longest
-from flip_sign.assets import keys
+from flip_sign.assets import keys, fonts
 import textwrap
 import flip_sign.helpers as hlp
 import random
@@ -12,8 +12,8 @@ import logging
 logger_name = 'flip_sign.message_generation'
 message_gen_logger = logging.getLogger(logger_name)
 
-press_start_path = r'./assets/fonts/PressStart2P.ttf'
-dat_dot_path = r'./assets/fonts/DatDot_edited_v1.ttf'
+press_start_path = fonts['PressStart2P']
+dat_dot_path = fonts['DatDot']
 
 
 class Message(object):
