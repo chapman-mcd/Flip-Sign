@@ -453,7 +453,12 @@ class AccuweatherDescription(BasicTextMessage):
             message_gen_logger.warning("Improper WeatherDescription construction.  Location:" + str(location))
 
     def render(self):
+        """
+        Prepares the message for display.  Makes API requests to get the proper weather text, then displays it
+        using the same render method as a basic text message.
 
+        :return: None
+        """
         api_request = ('http://dataservice.accuweather.com/forecasts/v1/daily/5day/',
                        self.location['Key'],
                        '?apikey=',
