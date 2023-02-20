@@ -36,3 +36,19 @@ def test_render_day():
 
         with Image.open(out_path) as test_result:
             assert image_equal(answer, test_result)
+
+
+def test_render_day_portugues():
+    with Image.open(root_dir + "/../tests/helpers/test_assets/Test_Render_Day_05.png") as answer:
+        out_path = root_dir + "/../tests/helpers/test_output/Test_Render_Day_05.png"
+        render_day(24, 22, 0.2, 1, "rain", "portugues").save(out_path)
+
+        with Image.open(out_path) as test_result:
+            assert image_equal(answer, test_result)
+
+    with Image.open(root_dir + "/../tests/helpers/test_assets/Test_Render_Day_06.png") as answer:
+        out_path = root_dir + "/../tests/helpers/test_output/Test_Render_Day_06.png"
+        render_day(29, 25, 0.7, 3, "hot", "portugues").save(out_path)
+
+        with Image.open(out_path) as test_result:
+            assert image_equal(answer, test_result)

@@ -662,7 +662,7 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
 
 
 def render_day(high: Union[float, int], low: Union[float, int], chance_precipitation: float,
-               iso_weekday: int, icon_name: str, language: Literal['english'] = "english"):
+               iso_weekday: int, icon_name: str, language: Literal['english', 'portugues'] = "english"):
     """
     Creates a sub-image with the forecast for a specific day.
 
@@ -671,7 +671,7 @@ def render_day(high: Union[float, int], low: Union[float, int], chance_precipita
     :param chance_precipitation: (float): the chance of precipitation, as a probability (0-1)
     :param iso_weekday: (int): the day of the week according to the ISO system (week starts on Monday)
     :param icon_name: (str): the weather icon to be displayed
-    :param language: (str): the language for weekdays to be written in, currently only english.
+    :param language: (str): the language for weekdays to be written in, currently only 'english' and 'portugues'.
     :return: (PIL.Image.Image): an image summarizing the weather for the appropriate day
     """
 
