@@ -4,11 +4,12 @@ import datetime as dt
 from cachetools import cached, TLRUCache
 from typing import Union, Literal
 import json
-from PIL import ImageFont, ImageDraw, Image
+from PIL import ImageFont, ImageDraw, ImageChops, Image
 import gzip
 import re
 import textwrap
 from collections import namedtuple
+from flip_sign.assets import root_dir
 import math
 
 logger_name = 'flip_sign.helpers'
@@ -658,3 +659,64 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str |
                                          anchor='la', align=text_align)
 
     return image, wrap_parameters, final_line_spacing
+
+
+def render_day(high: Union[float, int], low: Union[float, int], chance_precipitation: float,
+               iso_weekday: int, icon_name: str, language: Literal['english'] = "english"):
+    """
+    Creates a sub-image with the forecast for a specific day.
+
+    :param high: (float or int): the daily high, in degrees C
+    :param low: (float or int): the daily high, in degrees C
+    :param chance_precipitation: (float): the chance of precipitation, as a probability (0-1)
+    :param iso_weekday: (int): the day of the week according to the ISO system (week starts on Monday)
+    :param icon_name: (str): the weather icon to be displayed
+    :param language: (str): the language for weekdays to be written in, currently only english.
+    :return: (PIL.Image.Image): an image summarizing the weather for the appropriate day
+    """
+
+    day_rendered = Image.new(mode="1", size=(22, 21), color=0)
+
+    # paste day-of-week image
+    weekday_img_path = "/".join([root_dir, "assets/weather_images/days_of_week", language,
+                                "ISOWEEKDAY_" + str(iso_weekday) + ".png"])
+    weekday_img = Image.open(fp=weekday_img_path, mode="r")
+    day_rendered.paste(im=weekday_img, box=(0, 6))
+
+    # paste weather icon
+    icon_img = Image.open(fp=root_dir + "/assets/weather_images/conditions_icons/" + icon_name + ".png")
+    day_rendered.paste(im=icon_img, box=(6, 6))
+
+    # paste the high and the low
+    high_below_zero = high < 0
+    low_below_zero = low < 0
+    high_rounded = "{:>2}".format(round(abs(high)))
+    low_rounded = "{:>2}".format(round(abs(low)))
+
+    if high_below_zero:
+        day_rendered.paste(im=1, box=(0, 0, 9, 5))
+
+    x_position = 1
+    for char in high_rounded:
+        number_image = Image.open(fp=root_dir + "/assets/weather_images/numbers/" + char + ".png")
+        if high_below_zero:
+            number_image = ImageChops.invert(number_image)
+        day_rendered.paste(im=number_image, box=(x_position, 0))
+        x_position += 4
+
+    if low_below_zero:
+        day_rendered.paste(im=1, box=(12, 0, 21, 5))
+
+    x_position = 13
+    for char in low_rounded:
+        number_image = Image.open(fp=root_dir + "/assets/weather_images/numbers/" + char + ".png")
+        if low_below_zero:
+            number_image = ImageChops.invert(number_image)
+        day_rendered.paste(im=number_image, box=(x_position, 0))
+        x_position += 4
+
+    # paste the chance of precipitation
+    chance_precipitation_rounded = min(math.floor(chance_precipitation * 6), 5)  # range 0-5
+    day_rendered.paste(im=1, box=(10, 5-chance_precipitation_rounded, 11, 5))
+
+    return day_rendered
