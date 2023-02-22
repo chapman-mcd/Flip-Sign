@@ -493,3 +493,121 @@ class AccuweatherDescription(BasicTextMessage):
                 raise ValueError("Weather Description Obj: Provided date not found in API response.")
 
         super().render()
+
+
+weather_stub_default_wrap_params = (
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=16, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=12, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=9, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=8, min_spacing=1, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=False, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=press_start_path, font_size=8, min_spacing=1, split_words=True, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=True, truncate=False,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=True, truncate=True,
+                           wrap_kwargs={}),
+    hlp.wrap_parameter_set(font_path=dat_dot_path, font_size=8, min_spacing=-2, split_words=True, truncate=True,
+                           wrap_kwargs={'placeholder': "."}),
+)
+
+
+class AccuweatherDashboard(Message):
+    """
+    A class to display weather forecast information in a visual layout.  Data source is accuweather API.
+    """
+    def __init__(self, location: dict, description: Optional[str] = None,
+                 start_date: Union[datetime.datetime, datetime.date] = None,
+                 language: Literal["english", "portugues"] = "english", frequency: float = 1.0):
+        """
+        Initializes the message.
+
+        :param location: (dict): a location response from the accuweather API
+        :param description: (str): Location description printed in the message.  Optional.
+        :param start_date: (datetime.datetime or datetime.date) the first day to display forecast.  default today
+        :param language: (str) the language for weekday display, currently only "english" and "portugues"
+        :param frequency: (float): the probability that the message will display
+        """
+
+        self.location = location.copy()
+        self.language = language
+        # standardize type to datetime.date
+        if hasattr(start_date, 'hour'):  # use attribute of hour to determine if date was passed as datetime
+            start_date = start_date.date()
+        elif start_date is None:  # if omitted, start with today
+            start_date = datetime.date.today()
+        self.start_date = start_date
+
+        if description is not None:
+            self.description = description
+        else:
+            self.description = self.location['LocalizedName']
+
+        self.weather_icon_lookup = {
+                                    1: 'sunny', 2: 'sunny',
+                                    3: 'partlycloudy', 4: 'partlycloudy',
+                                    5: 'mostlycloudy', 6: 'mostlycloudy',
+                                    7: 'cloudy', 8: 'cloudy',
+                                    11: 'fog',
+                                    12: 'rain', 13: 'rain', 14: 'rain',
+                                    15: 'tstorms', 16: 'tstorms', 17: 'tstorms',
+                                    18: 'rain',
+                                    19: 'snow', 20: 'snow', 21: 'snow', 22: 'snow', 23: 'snow',
+                                    24: 'sleet', 25: 'sleet', 26: 'sleet', 29: 'sleet',
+                                    30: 'hot', 31: 'cold', 32: 'wind'
+        }
+
+        super().__init__(frequency=frequency)
+
+    def render(self):
+        """
+        Prepare the message for display.  Make the required API calls, prepare the image and save in self.image.
+
+        :return: None.
+        """
+
+        # initialize output
+        dashboard_rendered = Image.new(mode="1", size=(168, 21), color=0)
+
+        # make API call
+        api_request = ('http://dataservice.accuweather.com/forecasts/v1/daily/5day/',
+                       self.location['Key'],
+                       '?apikey=',
+                       keys['AccuweatherAPI'],
+                       '&details=true',
+                       '&metric=true')
+
+        response = hlp.accuweather_api_request(api_request)  # no try/except here since errors should be handled above
+
+        # wrap description text and add to output
+        weather_stub_size = (58, 21)
+        description_drawn, _, _ = hlp.draw_text_best_parameters(params_order=weather_stub_default_wrap_params,
+                                                                bbox_size=weather_stub_size, text=self.description)
+        dashboard_rendered.paste(im=description_drawn, box=(0, 0))
+
+        # add forecast days to image
+        x_position = 59
+        for forecast_day in response['DailyForecasts']:
+            forecast_date = datetime.datetime.fromisoformat(forecast_day['Date'])
+            if forecast_date.date() >= self.start_date:  # only add if after start date
+                # extract info from API response
+                high = forecast_day['RealFeelTemperature']['Maximum']['Value']
+                low = forecast_day['RealFeelTemperature']['Minimum']['Value']
+                chance_precipitation = forecast_day['Day']['PrecipitationProbability'] / 100.0
+                iso_weekday = forecast_date.isoweekday()
+                icon = self.weather_icon_lookup[forecast_day['Day']['Icon']]
+
+                # call render_day to create the image for the day
+                forecast_dashboard_part = hlp.render_day(high=high, low=low, chance_precipitation=chance_precipitation,
+                                                         iso_weekday=iso_weekday, icon_name=icon,
+                                                         language=self.language)
+                dashboard_rendered.paste(im=forecast_dashboard_part, box=(x_position, 0))
+                x_position += 22
+
+        # save in self.image
+        self.image = dashboard_rendered
