@@ -1,7 +1,8 @@
 import logging
 from urllib.request import Request, urlopen
+from urllib.parse import quote
 import datetime as dt
-from cachetools import cached, TLRUCache
+from cachetools import cached, TLRUCache, TTLCache
 from typing import Union, Literal
 import json
 from PIL import ImageFont, ImageDraw, ImageChops, Image
@@ -9,7 +10,7 @@ import gzip
 import re
 import textwrap
 from collections import namedtuple
-from flip_sign.assets import root_dir
+from flip_sign.assets import root_dir, keys
 import math
 
 logger_name = 'flip_sign.helpers'
@@ -59,6 +60,29 @@ def accuweather_api_request(url):
     response = json.loads(gzip.decompress(urlopen(req).read()))
 
     return response
+
+
+_google_geocoding_cache = TTLCache(maxsize=50, ttl=60*60*24*30)  # cache geocoding results for 30 days
+@cached(cache=_google_geocoding_cache)
+def geocode_to_lat_long(location_string: str):
+    """
+    Uses google's geocoding API to turn strings provided into lat/long coordinates.  Always chooses the most likely /
+    first option returned by the API.  Raises ValueError if location not found by google.  Does not handle any
+    HTTP exceptions - all are passed on.
+
+    :param location_string: (str) - the location to be geocoded.
+    :return: (dict): a dictionary containing {'lat': **latitude_value**, 'lng': **longitude_value**}
+    """
+
+    geocode_base_url = 'https://maps.googleapis.com/maps/api/geocode/json?address='
+    url_string = ''.join([geocode_base_url, quote(location_string), "&key=", keys['GoogleLocationAPI']])
+    req = Request(url_string)
+    response = json.loads(urlopen(req).read())
+
+    if response['status'] == 'ZERO_RESULTS':
+        raise ValueError("Location not found by Google API.")
+    else:
+        return response['results'][0]['geometry']['location']
 
 
 def countdown_format(target_start, target_end, all_day):
