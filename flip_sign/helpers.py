@@ -8,10 +8,13 @@ import json
 from PIL import ImageFont, ImageDraw, ImageChops, Image
 import gzip
 import re
+import os
 import textwrap
 from collections import namedtuple
 from flip_sign.assets import root_dir, keys
 import math
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 logger_name = 'flip_sign.helpers'
 helper_logger = logging.getLogger(logger_name)
@@ -744,3 +747,38 @@ def render_day(high: Union[float, int], low: Union[float, int], chance_precipita
     day_rendered.paste(im=1, box=(10, 5-chance_precipitation_rounded, 11, 5))
 
     return day_rendered
+
+
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive.readonly']
+
+
+def get_credentials():
+    """
+    Provided as part of the google api python client libraries.  Copied here for use as a helper function.
+    Gets valid user credentials from storage.
+    If nothing has been stored, or if the stored credentials are invalid,
+    the OAuth2 flow is completed to obtain the new credentials.
+    Returns:
+        Creds, the obtained credential.
+    """
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists(keys['GOOGLE_TOKEN_PATH']):
+        creds = Credentials.from_authorized_user_file(keys['GOOGLE_TOKEN_PATH'], SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                keys['GOOGLE_CLIENT_SECRET_FILE'], SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open(keys['GOOGLE_TOKEN_PATH'], 'w') as token:
+            token.write(creds.to_json())
+
+    return creds
