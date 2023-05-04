@@ -4,11 +4,10 @@ flip_sign/assets/cache/**
 tests/assets/fonts/**
 tests/assets/keys/**
 tests/assets/cache/**
+tests/message_generation/test_assets/google_calendar_responses*
 .DS_Store
 .idea/
 __pycache__/
 *.icloud
 Google_Drive_Example.py
 Weather_Scratch.py
-
-
