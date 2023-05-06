@@ -4,6 +4,10 @@ from PIL import Image
 from unittest.mock import patch
 from tests.helpers.draw_text_test import image_equal
 import datetime
+from tzlocal import get_localzone_name
+from pytz import timezone
+
+LOCAL_TIMEZONE = timezone(get_localzone_name())
 
 
 @patch(f'{flip_sign.message_generation.__name__}.datetime', wraps=datetime)
@@ -15,7 +19,7 @@ def test_how_long_till_christmas(message_gen_datetime, helpers_datetime):
         fake_now = datetime.datetime(year=1999, month=12, day=23, hour=18, minute=15)
         helpers_datetime.datetime.now.return_value = fake_now
         message_gen_datetime.datetime.now.return_value = fake_now
-        christmas_start = datetime.datetime(year=2001, month=12, day=25)
+        christmas_start = datetime.datetime(year=2001, month=12, day=25).replace(tzinfo=LOCAL_TIMEZONE)
         test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start=christmas_start,
                                              base_date_end=christmas_start, all_day=True, frequency=1.0)
         test_msg.render()
@@ -29,7 +33,7 @@ def test_how_long_till_christmas(message_gen_datetime, helpers_datetime):
         fake_now = datetime.datetime(year=1999, month=12, day=25, hour=18, minute=15)
         helpers_datetime.datetime.now.return_value = fake_now
         message_gen_datetime.datetime.now.return_value = fake_now
-        christmas_start = datetime.datetime(year=2001, month=12, day=25)
+        christmas_start = datetime.datetime(year=2001, month=12, day=25).replace(tzinfo=LOCAL_TIMEZONE)
         test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start=christmas_start,
                                              base_date_end=christmas_start, all_day=True, frequency=1.0)
         test_msg.render()
@@ -43,7 +47,7 @@ def test_how_long_till_christmas(message_gen_datetime, helpers_datetime):
         fake_now = datetime.datetime(year=1999, month=12, day=27, hour=18, minute=15)
         helpers_datetime.datetime.now.return_value = fake_now
         message_gen_datetime.datetime.now.return_value = fake_now
-        christmas_start = datetime.datetime(year=2001, month=12, day=25)
+        christmas_start = datetime.datetime(year=2001, month=12, day=25).replace(tzinfo=LOCAL_TIMEZONE)
         test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start=christmas_start,
                                              base_date_end=christmas_start, all_day=True, frequency=1.0)
         test_msg.render()

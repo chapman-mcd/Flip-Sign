@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Union, Literal, Optional
 from itertools import zip_longest
 from flip_sign.assets import keys, fonts
+from tzlocal import get_localzone_name
+from pytz import timezone
 import textwrap
 import flip_sign.helpers as hlp
 import random
@@ -15,6 +17,7 @@ message_gen_logger = logging.getLogger(logger_name)
 press_start_path = fonts['PressStart2P']
 dat_dot_path = fonts['DatDot']
 
+LOCAL_TIMEZONE = timezone(get_localzone_name())
 
 class Message(object):
     """
@@ -234,7 +237,7 @@ class EphemeralDateMessage(DateMessage):
             self.end = self.end.replace(hour=23, minute=59, second=59)
 
         # if message is fully in the past
-        if self.end < datetime.datetime.now():
+        if self.end < datetime.datetime.now().replace(tzinfo=LOCAL_TIMEZONE):
             self.display = False
             message_gen_logger.warning("EphemeralDateMessage fully in the past.  Description:" + self.description)
             return
@@ -290,7 +293,7 @@ class RecurringFixedDateMessage(DateMessage):
                 next_end: (datetime.datetime): the end of the next occurrence
                 all_day: (bool): whether the next occurrence is an all-day event
         """
-        now = datetime.datetime.now()
+        now = datetime.datetime.now().replace(tzinfo=LOCAL_TIMEZONE)
 
         # if the event has already passed this year, use next year
         if now > self.base_end.replace(year=now.year):

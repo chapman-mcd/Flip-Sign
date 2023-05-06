@@ -6,6 +6,8 @@ from cachetools import cached, TLRUCache, TTLCache
 from typing import Union, Literal
 import json
 from PIL import ImageFont, ImageDraw, ImageChops, Image
+from tzlocal import get_localzone_name
+from pytz import timezone
 import gzip
 import re
 import os
@@ -18,6 +20,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 
 logger_name = 'flip_sign.helpers'
 helper_logger = logging.getLogger(logger_name)
+
+LOCAL_TIMEZONE = timezone(get_localzone_name())
 
 
 def accuweather_cache_ttu(_key, value, now):
@@ -102,7 +106,7 @@ def countdown_format(target_start, target_end, all_day):
     """
 
     # initialize current time
-    current_time = dt.datetime.now()
+    current_time = dt.datetime.now().replace(tzinfo=LOCAL_TIMEZONE)
 
     # confirm time delta within limits
     if (target_start - current_time).days > 3651:

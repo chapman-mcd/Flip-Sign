@@ -5,6 +5,10 @@ from PIL import Image
 from unittest.mock import patch
 from tests.helpers.draw_text_test import image_equal
 import datetime
+from tzlocal import get_localzone_name
+from pytz import timezone
+
+LOCAL_TIMEZONE = timezone(get_localzone_name())
 
 
 # create test variable date function for Carnaval
@@ -19,7 +23,7 @@ def carnaval_date():
         
         easter_date = this_year_end - datetime.timedelta(days=1)
 
-    return easter_date, easter_date
+    return easter_date.replace(tzinfo=LOCAL_TIMEZONE), easter_date.replace(tzinfo=LOCAL_TIMEZONE)
 
 
 @patch(__name__ + '.datetime', wraps=datetime)

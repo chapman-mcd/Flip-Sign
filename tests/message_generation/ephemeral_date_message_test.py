@@ -5,10 +5,14 @@ from PIL import Image
 from unittest.mock import patch
 from tests.helpers.draw_text_test import image_equal
 import datetime
+from tzlocal import get_localzone_name
+from pytz import timezone
+
+LOCAL_TIMEZONE = timezone(get_localzone_name())
 
 
 def test_bad_frequency(caplog):
-    dt_now = datetime.datetime.now()
+    dt_now = datetime.datetime.now().replace(tzinfo=LOCAL_TIMEZONE)
     interval = datetime.timedelta(hours=3)
     test = EphemeralDateMessage(description="Blurgh", start=dt_now - interval, end=dt_now + interval,
                                 all_day=False, frequency=None)
@@ -17,7 +21,7 @@ def test_bad_frequency(caplog):
 
 
 def test_all_dates_in_past(caplog):
-    dt_now = datetime.datetime.now()
+    dt_now = datetime.datetime.now().replace(tzinfo=LOCAL_TIMEZONE)
     interval = datetime.timedelta(hours=3)
     test = EphemeralDateMessage(description="Blurgh", start=dt_now - interval*2, end=dt_now - interval,
                                 all_day=False, frequency=1.0)
@@ -34,7 +38,7 @@ def test_linear_decline_frequency():
 
 
 # Mirror time deltas from calendar test
-fake_now = datetime.datetime(year=2022, month=1, day=29, hour=10, minute=30)
+fake_now = datetime.datetime(year=2022, month=1, day=29, hour=10, minute=30).replace(tzinfo=LOCAL_TIMEZONE)
 
 
 @patch(f'{flip_sign.helpers.__name__}.dt', wraps=datetime)
@@ -43,7 +47,7 @@ def test_date_messages(mock_datetime):
     # test a non-all-day event in the near future
     with Image.open('./message_generation/test_assets/Test_01.png') as answer:
         out_path = './message_generation/test_output/Test_01.png'
-        test_date_01 = datetime.datetime(year=2022, month=1, day=30, hour=13, minute=10)
+        test_date_01 = datetime.datetime(year=2022, month=1, day=30, hour=13, minute=10).replace(tzinfo=LOCAL_TIMEZONE)
         time_delta_01 = datetime.timedelta(hours=5)
         test_msg = EphemeralDateMessage(description="Trip to Uranus and Neptune", start=test_date_01,
                                         end=test_date_01 + time_delta_01, all_day=False)
@@ -55,7 +59,7 @@ def test_date_messages(mock_datetime):
     # test an all-day event in the mid-future
     with Image.open('./message_generation/test_assets/Test_02.png') as answer:
         out_path = './message_generation/test_output/Test_02.png'
-        test_date_02 = datetime.datetime(year=2022, month=2, day=15)
+        test_date_02 = datetime.datetime(year=2022, month=2, day=15).replace(tzinfo=LOCAL_TIMEZONE)
         time_delta_02 = datetime.timedelta(days=1)
         test_msg = EphemeralDateMessage(description="Trip to Uranus and Neptune", start=test_date_02,
                                         end=test_date_02 + time_delta_02, all_day=True)
@@ -86,7 +90,7 @@ def test_date_message_descriptions(mock_datetime):
     # test a description that is too long
     with Image.open('./message_generation/test_assets/Test_04.png') as answer:
         out_path = './message_generation/test_output/Test_04.png'
-        test_date_01 = datetime.datetime(year=2022, month=1, day=30, hour=13, minute=10)
+        test_date_01 = datetime.datetime(year=2022, month=1, day=30, hour=13, minute=10).replace(tzinfo=LOCAL_TIMEZONE)
         time_delta_01 = datetime.timedelta(hours=5)
         too_long_description = "This text is too long.  Like, way too long.  Way way way too long."
         test_msg = EphemeralDateMessage(description=too_long_description, start=test_date_01,
