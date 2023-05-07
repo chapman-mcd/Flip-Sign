@@ -38,7 +38,7 @@ def test_linear_decline_frequency():
 
 
 # Mirror time deltas from calendar test
-fake_now = datetime.datetime(year=2022, month=1, day=29, hour=10, minute=30).replace(tzinfo=LOCAL_TIMEZONE)
+fake_now = datetime.datetime(year=2022, month=1, day=29, hour=10, minute=30)
 
 
 @patch(f'{flip_sign.helpers.__name__}.dt', wraps=datetime)
@@ -71,7 +71,7 @@ def test_date_messages(mock_datetime):
     # test a non-all-day event happening now
     with Image.open('./message_generation/test_assets/Test_03.png') as answer:
         out_path = './message_generation/test_output/Test_03.png'
-        test_date_03 = fake_now - datetime.timedelta(hours=2)
+        test_date_03 = (fake_now - datetime.timedelta(hours=2)).replace(tzinfo=LOCAL_TIMEZONE)
         test_msg = EphemeralDateMessage(description="Trip to Uranus and Neptune", start=test_date_03,
                                         end=test_date_03 + time_delta_01, all_day=False)
         test_msg.render()
@@ -115,8 +115,8 @@ def test_date_message_descriptions(mock_datetime):
 @patch(f'{flip_sign.helpers.__name__}.dt', wraps=datetime)
 def test_date_message_fully_future(mock_datetime, caplog):
     mock_datetime.datetime.now.return_value = fake_now
-    test_start = fake_now - datetime.timedelta(days=3)
-    test_end = fake_now - datetime.timedelta(days=2)
+    test_start = (fake_now - datetime.timedelta(days=3)).replace(tzinfo=LOCAL_TIMEZONE)
+    test_end = (fake_now - datetime.timedelta(days=2)).replace(tzinfo=LOCAL_TIMEZONE)
     test_desc = "Blurgh"
     test_msg = EphemeralDateMessage(description=test_desc, start=test_start,
                                     end=test_end, all_day=False)

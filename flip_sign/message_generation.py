@@ -179,7 +179,7 @@ class DateMessage(Message):
             super().__init__(frequency)
         elif callable(frequency):
             next_start, _, _ = self.next_occurrence()
-            days = (next_start - datetime.datetime.now()).days
+            days = (next_start - datetime.datetime.now().replace(tzinfo=LOCAL_TIMEZONE)).days
             super().__init__(frequency(days))
         else:
             self.display = False
