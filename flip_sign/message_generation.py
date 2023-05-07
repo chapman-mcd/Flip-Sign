@@ -5,11 +5,14 @@ from itertools import zip_longest
 from flip_sign.assets import keys, fonts
 from tzlocal import get_localzone_name
 from pytz import timezone
+from googleapiclient.discovery import build
+from operator import itemgetter
 import textwrap
 import flip_sign.helpers as hlp
 import random
 import datetime
 import logging
+import config
 
 logger_name = 'flip_sign.message_generation'
 message_gen_logger = logging.getLogger(logger_name)
@@ -614,3 +617,154 @@ class AccuweatherDashboard(Message):
 
         # save in self.image
         self.image = dashboard_rendered
+
+
+class MessageFactory(object):
+    """
+    A base class for Message Factories to organize class hierarchy and help with logging.
+    """
+    def __init__(self):
+        self.logging_str = None
+
+    def generate_messages(self):
+        """
+        All MessageFactories must have a generate_messages method.
+
+        :return: None.  In subclass, returns list of message and message factory objects.
+        """
+        raise NotImplementedError
+
+    def log_message_gen(self):
+        """
+        Writes descriptive message to the log at the start of each message generation function.
+
+        :return:
+        """
+        message_gen_logger.info("Beginning message generation for " + self.logging_str)
+
+
+class GoogleCalendarMessageFactory(MessageFactory):
+    """
+    A class which generates EphemeralDateMessages, AccuweatherDashboard and AccuweatherDescription messages from
+    google calendar events.
+
+    Events are only turned into EphemeralDateMessages if they are colored red ("tomato") in the Google Calendar UI.
+    Weather messages are generated if the event is within the 5-day forecast window and is outside of 100 miles
+    from the home location.
+    """
+    def __init__(self, calendar_id: str):
+        """
+        Stores the calendar id for later use when the message factory is called.
+
+        :param calendar_id: (str) the ID of the google calendar, passed to the google API
+        """
+
+        self.calendar_id = calendar_id
+        self.logging_str = "GoogleCalendarMessageFactory:" + str(self.calendar_id)
+
+    def generate_messages(self, max_days_in_future: int = 270):
+        """
+        Extracts appropriate messages from the google calendar.
+
+        :return: generated_output: (list) a list of message and message_factory objects
+        """
+
+        self.log_message_gen()
+
+        google_calendar_service = build('calendar', 'v3', credentials=hlp.get_credentials())
+        now = datetime.datetime.utcnow().isoformat() + 'Z'  # 'Z' indicates UTC time
+        end_time = (datetime.datetime.utcnow() + datetime.timedelta(days=max_days_in_future)).isoformat() + "Z"
+
+        calendar_responses = []
+
+        events_request = google_calendar_service.events().list(calendarId=self.calendar_id, timeMin=now,
+                                                               timeMax=end_time, singleEvents=True,
+                                                               orderBy='startTime')
+        # make requests to google calendar
+        while events_request is not None:
+            events_result = events_request.execute()
+            events = events_result.get('items', [])
+            calendar_responses.append(events)
+            events_request = google_calendar_service.events().list_next(events_request, events_result)
+
+        # process responses
+        messages_result = []
+        for page in calendar_responses:
+            for event in page:
+                if ('colorId', '11') in event.items():  # if the event is color-tagged red (colorId 11)
+                    # first add the EphemeralDateMessage
+                    all_day = 'date' in event['start'].keys() and 'date' in event['end'].keys()
+                    if all_day:
+                        start = datetime.datetime.fromisoformat(event['start']['date']).replace(tzinfo=LOCAL_TIMEZONE)
+                        end = datetime.datetime.fromisoformat(event['end']['date']).replace(tzinfo=LOCAL_TIMEZONE)
+                        end -= datetime.timedelta(days=1)  # remove 1 day from all-day events (handling convention)
+                    else:  # if not all-day event
+                        start = datetime.datetime.fromisoformat(event['start']['dateTime'])  # expect time-zone-aware
+                        end = datetime.datetime.fromisoformat(event['end']['dateTime'])  # expect time-zone aware
+
+                    messages_result.append(EphemeralDateMessage(description=event['summary'], start=start, end=end,
+                                                                all_day=all_day))
+
+                    # next add the accuweather message factory, if necessary
+                    if 'location' in event.keys():  # if the event has a location
+                        # get event location lat-long
+                        try:
+                            lat, lng = itemgetter('lat', 'lng')(hlp.geocode_to_lat_long(event['location']))
+                        except ValueError:  # google api was unable to find a location
+                            message_gen_logger.warning("Unable to get lat/lng for event location: " + event['location'])
+                            continue  # do not add a location
+
+                        # get the home location lat-long (inefficient in general, but its cached)
+                        # if getting at the top there is the potential to set a lat-long before the user has input
+                        try:
+                            home_lat, home_lng = itemgetter('lat', 'lng')(hlp.geocode_to_lat_long(config.HOME_LOCATION))
+                        except ValueError:
+                            message_gen_logger.warning("Unable to get lat/lng for home: " + config.HOME_LOCATION)
+                            continue
+
+                        # only add weather if location is more than 160 km away
+                        if hlp.great_circle_distance(lat, lng, home_lat, home_lng) > 160:
+                            # get start date as a datetime object
+                            start_date = start.date()
+                            messages_result.append(AccuweatherAPIMessageFactory(location_description=event['location'],
+                                                                                start_date=start_date))
+
+        return messages_result
+
+
+class AccuweatherAPIMessageFactory(MessageFactory):
+    """
+    A factory class which generates AccuweatherDashboard and AccuweatherDescription messages for a given location.
+    """
+    def __init__(self, location_description: str, headline: bool = False, description: Optional[str] = None,
+                 weather_descriptions: bool = False, weather_dashboard: bool = True,
+                 start_date: datetime.date = datetime.date.today()):
+        """
+        Initializes the factory - saves variables to be ready for the generate_messages call.
+
+        :param location_description: (str) the location for weather forecasts, used to find location using geocoding
+        :param headline: (bool) whether to create a message for the accuweather headline
+        :param description: (str) an optional friendly name to refer to the location
+        :param weather_descriptions: (bool) whether to create messages for the day-by-day descriptions of the weather
+        :param weather_dashboard: (bool) whether to create the dashboard message
+        :param start_date: (datetime.date) the first date of interest for the forecasts
+        """
+
+        self.location_description = location_description
+        self.headline = headline
+        self.description = description
+        self.weather_descriptions = weather_descriptions
+        self.weather_dashboard = weather_dashboard
+        self.start_date = start_date
+
+        self.logging_str = "AccuweatherMessageFactory: " + location_description
+
+    def generate_messages(self):
+        """
+        Generates the message objects and returns them in a list.
+
+        :return: (list) the message objects as per input (for location, containing dashboard, headline, etc)
+        """
+        self.log_message_gen()
+        pass
+    

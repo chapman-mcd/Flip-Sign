@@ -1,0 +1,1 @@
+HOME_LOCATION = 'Nameless, TN'  # to be overwritten at runtime by flip-sign.py

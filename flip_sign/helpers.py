@@ -8,6 +8,7 @@ import json
 from PIL import ImageFont, ImageDraw, ImageChops, Image
 from tzlocal import get_localzone_name
 from pytz import timezone
+from math import acos, sin, cos, radians
 import gzip
 import re
 import os
@@ -787,3 +788,24 @@ def get_credentials():
             token.write(creds.to_json())
 
     return creds
+
+
+def great_circle_distance(lat_1: float, lng_1: float, lat_2: float, lng_2: float):
+    """
+    Calculates the great-circle distance between two lat-long pairs.  Result returned as float km.
+    Assumes spherical earth with radius = 6371 km
+
+    :param lat_1: (float) the latitude of the first location
+    :param lng_1: (float) the longitude of the first location
+    :param lat_2: (float) the latitude of the second location
+    :param lng_2: (float) the longitude of the second location
+    :return: distance: (float) the great-circle distance between the two locations, in km
+    """
+
+    radius_earth = 6371
+
+    distance = acos(sin(radians(lat_1)) * sin(radians(lat_2)) +
+                    cos(radians(lat_1)) * cos(radians(lat_2)) *
+                    cos(radians(lng_2) - radians(lng_1))) * radius_earth
+
+    return distance
