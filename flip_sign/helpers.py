@@ -15,6 +15,7 @@ import textwrap
 from collections import namedtuple
 from flip_sign.assets import root_dir, keys
 import math
+from google.auth.transport.requests import Request as google_Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
@@ -776,7 +777,7 @@ def get_credentials():
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(google_Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 keys['GOOGLE_CLIENT_SECRET_FILE'], SCOPES)
