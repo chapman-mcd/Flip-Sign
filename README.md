@@ -19,6 +19,7 @@ python -m pip install --upgrade google-api-python-client google-auth-httplib2 go
 python -m pip install beautifulsoup4 pyserial python-dateutil
 python -m pip install pillow cachetools
 python -m pip install pytest 
+python -m pip install pytz tzlocal
 ```
 
 Note: on raspberry pi (the intended deployment environment) some of pillow's dependencies are missing and must be installed manually.  After configuring ```pyenv``` for python version and virtual environment needs, the remaining dependencies were:
