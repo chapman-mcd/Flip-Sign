@@ -7,6 +7,7 @@ from tzlocal import get_localzone_name
 from pytz import timezone
 from googleapiclient.discovery import build
 from operator import itemgetter
+from urllib.parse import quote
 import textwrap
 import flip_sign.helpers as hlp
 import random
@@ -738,7 +739,7 @@ class AccuweatherAPIMessageFactory(MessageFactory):
     """
     def __init__(self, location_description: str, headline: bool = False, description: Optional[str] = None,
                  weather_descriptions: bool = False, weather_dashboard: bool = True,
-                 start_date: datetime.date = datetime.date.today()):
+                 start_date: datetime.date = datetime.date.today(), frequency: float = 1.0):
         """
         Initializes the factory - saves variables to be ready for the generate_messages call.
 
@@ -748,6 +749,7 @@ class AccuweatherAPIMessageFactory(MessageFactory):
         :param weather_descriptions: (bool) whether to create messages for the day-by-day descriptions of the weather
         :param weather_dashboard: (bool) whether to create the dashboard message
         :param start_date: (datetime.date) the first date of interest for the forecasts
+        :param frequency: (float): the probability that the message will display
         """
 
         self.location_description = location_description
@@ -756,6 +758,7 @@ class AccuweatherAPIMessageFactory(MessageFactory):
         self.weather_descriptions = weather_descriptions
         self.weather_dashboard = weather_dashboard
         self.start_date = start_date
+        self.frequency = frequency
 
         self.logging_str = "AccuweatherMessageFactory: " + location_description
 
@@ -766,5 +769,38 @@ class AccuweatherAPIMessageFactory(MessageFactory):
         :return: (list) the message objects as per input (for location, containing dashboard, headline, etc)
         """
         self.log_message_gen()
-        pass
+
+        try:
+            lat, lng = itemgetter('lat', 'lng')(hlp.geocode_to_lat_long(self.location_description))
+        except ValueError:
+            return [BasicTextMessage("Error geocoding location: " + self.location_description, frequency=1.0)]
+
+        url = "".join(["http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?",
+                       "apikey=", keys['AccuweatherAPI'],
+                       "&q=", quote(str(lat) + "," + str(lng))])
+
+        location_response = hlp.accuweather_api_request(url=url)
+
+        # create objects as requested (dashboard, headline, description)
+        messages_out = []
+        if self.weather_dashboard:
+            messages_out.append(AccuweatherDashboard(location=location_response, description=self.description,
+                                                     start_date=self.start_date, language=config.WEATHER_LANGUAGE,
+                                                     frequency=self.frequency))
+        if self.weather_descriptions:
+            messages_out.append(AccuweatherDescription(location=location_response, description=self.description,
+                                                       date=self.start_date, day_or_night='day',
+                                                       frequency=self.frequency))
+            messages_out.append(AccuweatherDescription(location=location_response, description=self.description,
+                                                       date=self.start_date, day_or_night='night',
+                                                       frequency=self.frequency))
+            messages_out.append(AccuweatherDescription(location=location_response, description=self.description,
+                                                       date=self.start_date + datetime.timedelta(days=1),
+                                                       day_or_night='day', frequency=self.frequency))
+
+        if self.headline:
+            messages_out.append(AccuweatherDescription(location=location_response, description=self.description,
+                                                       headline=True, frequency=self.frequency))
+
+        return messages_out
     
