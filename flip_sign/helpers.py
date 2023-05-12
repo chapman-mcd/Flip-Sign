@@ -1,4 +1,5 @@
 import logging
+import pathlib
 from urllib.request import Request, urlopen
 from urllib.parse import quote
 import datetime as dt
@@ -9,6 +10,7 @@ from PIL import ImageFont, ImageDraw, ImageChops, Image
 from tzlocal import get_localzone_name
 from pytz import timezone
 from math import acos, sin, cos, radians
+from hashlib import sha256
 import gzip
 import re
 import os
@@ -809,3 +811,22 @@ def great_circle_distance(lat_1: float, lng_1: float, lat_2: float, lng_2: float
                     cos(radians(lng_2) - radians(lng_1))) * radius_earth
 
     return distance
+
+
+def sha256_with_default(file_path: pathlib.Path):
+    """
+    Computes the sha256 hash of an image file in the cache, if it exists.  If the file does not exist,
+    returns a dummy string.  Primary purpose is determining if an image file has changed from a server version.
+    As such, the dummy string will never match the server hash and avoids file-existence exceptions.
+
+    :param file_path: (Path) the path to the object
+    :return: (str) the sha256 hash, or a dummy string if the file does not exist
+    """
+
+    if file_path.exists():
+        with open(file_path, 'rb') as f:
+            file_hash = sha256(f.read()).hexdigest()
+    else:
+        file_hash = "file does not exist lol"
+
+    return file_hash
