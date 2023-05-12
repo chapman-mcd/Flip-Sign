@@ -3,6 +3,8 @@ import pathlib
 from urllib.request import Request, urlopen
 from urllib.parse import quote
 import datetime as dt
+from googleapiclient.discovery import Resource
+from googleapiclient.http import MediaIoBaseDownload
 from cachetools import cached, TLRUCache, TTLCache
 from typing import Union, Literal
 import json
@@ -14,6 +16,7 @@ from hashlib import sha256
 import gzip
 import re
 import os
+import io
 import textwrap
 from collections import namedtuple
 from flip_sign.assets import root_dir, keys
@@ -830,3 +833,27 @@ def sha256_with_default(file_path: pathlib.Path):
         file_hash = "file does not exist lol"
 
     return file_hash
+
+
+def download_file_google_drive(file_id: str, out_path: Union[str, pathlib.Path],
+                               drive_service: Resource):
+    """
+    Downloads the file specified by file_id from the provided Google API Resource drive_service and saves it
+    at location out_path.
+
+    :param file_id: (str) the file_id to download
+    :param out_path: (str or Path) where to save the file
+    :param drive_service: (google api resource) the google API object to use
+    :return: None
+    """
+
+    if isinstance(out_path, pathlib.Path):
+        out_path = out_path.as_posix()
+
+    file_request = drive_service.files().get_media(fileId=file_id)
+    file_handler = io.FileIO(out_path, mode='wb')
+    downloader = MediaIoBaseDownload(fd=file_handler, request=file_request)
+    done = False
+    while done is False:
+        status, done = downloader.next_chunk()
+        helper_logger.info("Downloading file " + out_path + "progress: " + str(status.progress()))
