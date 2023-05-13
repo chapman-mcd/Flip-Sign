@@ -2,7 +2,7 @@ from PIL import Image, UnidentifiedImageError
 from pathlib import Path
 from typing import Union, Literal, Optional
 from itertools import zip_longest
-from flip_sign.assets import keys, fonts
+from flip_sign.assets import keys, fonts, root_dir
 from tzlocal import get_localzone_name
 from pytz import timezone
 from googleapiclient.discovery import build
@@ -803,4 +803,42 @@ class AccuweatherAPIMessageFactory(MessageFactory):
                                                        headline=True, frequency=self.frequency))
 
         return messages_out
-    
+
+
+class GoogleDriveImageMessageFactory(MessageFactory):
+    """
+    A Message factory which creates image messages based on a folder from google drive.
+    """
+    def __init__(self, drive_folder: str):
+        self.drive_folder = drive_folder
+
+        self.logging_str = "GoogleDriveImageMessageFactory: " + self.drive_folder
+
+    def generate_messages(self):
+        """
+        Checks the drive folder contents against local cache, downloads any new or updated images, and
+        generates the ImageMessage objects for the images on the drive (ignoring any extra locally).
+
+        :return: (list): a list of ImageMessage objects from the images in the folder
+        """
+
+        # get list of files in google drive
+        drive_service = build('drive', 'v3', credentials=hlp.get_credentials())
+
+        files_request = drive_service.files().list(q=self.drive_folder,
+                                                   fields="nextPageToken, files(id, name, sha256Checksum)")
+
+        pages = []
+        while files_request is not None:
+            files_result = files_request.execute()
+            pages.append(files_result.get('files', []))
+            files_request = drive_service.files().list_next(files_request, files_result)
+
+        messages_out = []
+        for page in pages:
+            for file in page:
+                file_path = Path(root_dir + "/cache/google_drive_images/" + file['name'])
+                if not hlp.sha256_with_default(file_path) == file['sha256Checksum']:
+                    hlp.download_file_google_drive(file_id=file['id'], out_path=file_path, drive_service=drive_service)
+                messages_out.append(ImageMessage(file_path))
+        return messages_out

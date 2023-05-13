@@ -1,10 +1,12 @@
 flip_sign/assets/fonts/**
 flip_sign/assets/keys/**
 flip_sign/assets/cache/**
+flip_sign/cache/**
 tests/assets/fonts/**
 tests/assets/keys/**
 tests/assets/cache/**
 tests/message_generation/test_assets/google_calendar_responses*
+tests/message_generation/test_assets/google_drive_responses*
 .DS_Store
 .idea/
 __pycache__/
