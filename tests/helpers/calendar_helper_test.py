@@ -7,7 +7,8 @@ from pytz import timezone
 
 LOCAL_TIMEZONE = timezone(get_localzone_name())
 
-fake_now = dt.datetime(year=2022, month=1, day=29, hour=10, minute=30).replace(tzinfo=LOCAL_TIMEZONE)
+fake_now = dt.datetime(year=2022, month=1, day=29, hour=10, minute=30)
+
 
 # write tests for helper add_years
 def test_time_addition_helpers():
@@ -60,13 +61,13 @@ def test_simple_time_deltas(mock_datetime):
                                               all_day=True) == ('2wk', '3d ')
 
     # test a non-all-day event happening now
-    test_date_03 = fake_now - dt.timedelta(hours=2)
+    test_date_03 = (fake_now - dt.timedelta(hours=2)).replace(tzinfo=LOCAL_TIMEZONE)
     assert flip_sign.helpers.countdown_format(test_date_03,
                                               test_date_03 + time_delta_01,
                                               all_day=False) == ('Now', '   ')
 
     # test an all-day event happening now
-    test_date_04 = fake_now.replace(hour=00, minute=00)
+    test_date_04 = fake_now.replace(hour=00, minute=00, tzinfo=LOCAL_TIMEZONE)
     assert flip_sign.helpers.countdown_format(test_date_04,
                                               test_date_04 + dt.timedelta(days=1),
                                               all_day=True) == ('Now', '   ')
@@ -122,21 +123,21 @@ def test_time_delta_errors(mock_datetime):
     mock_datetime.datetime.now.return_value = fake_now
     # end time before start time
     test_date_01d = dt.datetime(year=2022, month=2, day=15).replace(tzinfo=LOCAL_TIMEZONE)
-    with pytest.raises(ValueError) as e_info:
+    with pytest.raises(ValueError) as _:
         flip_sign.helpers.countdown_format(test_date_01d,
                                            test_date_01d + dt.timedelta(days=-10),
                                            all_day=True)
 
     # test providing a time which is further in the future than allowed
     test_date_02d = dt.datetime(year=2045, month=2, day=15).replace(tzinfo=LOCAL_TIMEZONE)
-    with pytest.raises(ValueError) as e_info:
+    with pytest.raises(ValueError) as _:
         flip_sign.helpers.countdown_format(test_date_02d,
                                            test_date_02d + dt.timedelta(days=15),
                                            all_day=True)
 
     # test event in the past
     test_date_03d = dt.datetime(year=1999, month=12, day=31).replace(tzinfo=LOCAL_TIMEZONE)
-    with pytest.raises(ValueError) as e_info:
+    with pytest.raises(ValueError) as _:
         flip_sign.helpers.countdown_format(test_date_03d,
                                            test_date_03d + dt.timedelta(days=15),
                                            all_day=True)
