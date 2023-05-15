@@ -182,7 +182,13 @@ class DateMessage(Message):
         if isinstance(frequency, float):
             super().__init__(frequency)
         elif callable(frequency):
-            next_start, _, _ = self.next_occurrence()
+            try:
+                next_start, _, _ = self.next_occurrence()
+            except TypeError as e:
+                self.display = False
+                message_gen_logger.warning("Error generating next occurrence.  Description:" + self.description)
+                message_gen_logger.warning("Full error description:" + str(e))
+                return
             days = (next_start - datetime.datetime.now().replace(tzinfo=LOCAL_TIMEZONE)).days
             super().__init__(frequency(days))
         else:
