@@ -11,5 +11,3 @@ tests/message_generation/test_assets/google_drive_responses*
 .idea/
 __pycache__/
 *.icloud
-Google_Drive_Example.py
-Weather_Scratch.py

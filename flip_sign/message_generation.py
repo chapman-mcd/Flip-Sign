@@ -8,8 +8,10 @@ from pytz import timezone
 from googleapiclient.discovery import build
 from operator import itemgetter
 from urllib.parse import quote
+import ast
 import textwrap
 import flip_sign.helpers as hlp
+import flip_sign.variable_date_functions as vdf
 import random
 import datetime
 import logging
@@ -847,4 +849,68 @@ class GoogleDriveImageMessageFactory(MessageFactory):
                 if not hlp.sha256_with_default(file_path) == file['sha256Checksum']:
                     hlp.download_file_google_drive(file_id=file['id'], out_path=file_path, drive_service=drive_service)
                 messages_out.append(ImageMessage(file_path))
+        return messages_out
+
+
+message_objects_ref = {
+    'BasicTextMessage': BasicTextMessage,
+    'RecurringFixedDateMessage': RecurringFixedDateMessage,
+    'RecurringVariableDateMessage': RecurringVariableDateMessage,
+    'DateMatchTextMessage': DateMatchTextMessage,
+    'AccuweatherAPIMessageFactory': AccuweatherAPIMessageFactory,
+    'GoogleCalendarMessageFactory': GoogleCalendarMessageFactory,
+    'GoogleDriveImageMessageFactory': GoogleDriveImageMessageFactory,
+    'mothers_day': vdf.mothers_day,
+    'thanksgiving': vdf.thanksgiving,
+    'carnaval': vdf.carnaval,
+    'fathers_day': vdf.fathers_day,
+    'labor_day': vdf.labor_day,
+    'memorial_day': vdf.memorial_day,
+    'mlk_day': vdf.mlk_day
+}
+
+
+class GoogleSheetMessageFactory(MessageFactory):
+    """
+    A message factory for generating messages in a formatted google sheet.
+    """
+    def __init__(self, sheet_id: str):
+        """
+        Saves the sheet_id and prepares logging string.
+
+        :param sheet_id: (str) the id of the google sheet to be accessed
+        """
+        self.sheet_id = sheet_id
+
+        self.logging_str = "Google SheetMessageFactory: " + self.sheet_id
+
+    def generate_messages(self):
+        """
+        Accesses the API, processes the result, and returns a list of messages and message factories.
+
+        :return: (list): the messages and message factories as defined in the google sheet
+        """
+
+        sheets_service = build('sheets', 'v4', credentials=hlp.get_credentials())
+        sheets_request = sheets_service.spreadsheets().values().get(spreadsheetId=self.sheet_id, range="Messages!A:C")
+        rows = sheets_request.execute()['values']
+
+        messages_out = []
+        for row in rows[1:]:  # skip first row, which is headers
+            if row[0] in message_objects_ref.keys():
+                message_obj = message_objects_ref[row[0]]
+            else:
+                message_gen_logger.warning("Message/factory type not found for row: " + str(row))
+                messages_out.append(BasicTextMessage("Message/Factory type not found.  Type:" + str(row[0])))
+                continue
+            kwargs_out = {}  # initialize kwargs_out as an empty dict, then fill if necessary
+            if len(row) == 3:  # if row contains the 3rd **kwargs object
+                for key, item in ast.literal_eval(row[2]).items():  # 3rd object must be a dictionary
+                    # replace reference with object if exists in reference dictionary
+                    if item in message_objects_ref.keys():
+                        kwargs_out[key] = message_objects_ref[item]
+                    else:
+                        kwargs_out[key] = item
+            messages_out.append(message_obj(row[1], **kwargs_out))  # no try/except as __init__ must not throw error
+
         return messages_out
