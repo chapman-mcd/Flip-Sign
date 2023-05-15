@@ -64,6 +64,22 @@ def assert_variable_date_message_equal(first_message: msg_gen.RecurringVariableD
     assert first_message.all_day == second_message.all_day
 
 
+def assert_fixed_date_message_equal(first_message: msg_gen.RecurringFixedDateMessage,
+                                    second_message: msg_gen.RecurringFixedDateMessage):
+    """
+    Asserts that two RecurringFixedDateMessage objects are equal, for the purposes of unit testing.
+
+    :param first_message: (RecurringFixedDateMessage) the left message
+    :param second_message: (RecurringFixedDateMessage) the right message
+    :return: None
+    """
+
+    assert first_message.description == second_message.description
+    assert first_message.base_start == second_message.base_start
+    assert first_message.base_end == second_message.base_end
+    assert first_message.all_day == second_message.all_day
+
+
 def assert_google_calendar_message_factory_equal(first_factory: msg_gen.GoogleCalendarMessageFactory,
                                           second_factory: msg_gen.GoogleCalendarMessageFactory):
     """
@@ -75,6 +91,32 @@ def assert_google_calendar_message_factory_equal(first_factory: msg_gen.GoogleCa
     """
 
     assert first_factory.calendar_id == second_factory.calendar_id
+
+
+def assert_google_drive_image_message_factory_equal(first_factory: msg_gen.GoogleDriveImageMessageFactory,
+                                                    second_factory: msg_gen.GoogleDriveImageMessageFactory):
+    """
+    Asserts that two GoogleDriveImageMessageFactory objects are equal, for the purposes of unit testing.
+
+    :param first_factory: (GoogleDriveImageMessageFactory) the left factory
+    :param second_factory: (GoogleDriveImageMessageFactory) the right factory
+    :return: None
+    """
+
+    assert first_factory.drive_folder == second_factory.drive_folder
+
+
+def assert_date_match_text_message_equal(first_message: msg_gen.DateMatchTextMessage,
+                                         second_message: msg_gen.DateMatchTextMessage):
+    """
+    Asserts that two DateMatchTextMessage objects are equal, for the purposes of unit testing.
+
+    :param first_message: (DateMatchTextMessage) the left message
+    :param second_message: (DateMatchTextMessage) the right message
+    :return: None
+    """
+
+    assert first_message.text == second_message.text
 
 
 def assert_message_gen_objects_equal(first_object, second_object):
@@ -97,17 +139,22 @@ def assert_message_gen_objects_equal(first_object, second_object):
         assert_func = assert_variable_date_message_equal
     elif isinstance(first_object, msg_gen.AccuweatherAPIMessageFactory):
         assert_func = assert_accuweather_message_factory_equal
+    elif isinstance(first_object, msg_gen.RecurringFixedDateMessage):
+        assert_func = assert_fixed_date_message_equal
+    elif isinstance(first_object, msg_gen.DateMatchTextMessage):
+        assert_func = assert_date_match_text_message_equal
+    elif isinstance(first_object, msg_gen.GoogleDriveImageMessageFactory):
+        assert_func = assert_google_drive_image_message_factory_equal
     else:
         raise NotImplementedError
 
     assert_func(first_object, second_object)
 
 
-with open(root_dir + "/../tests/message_generation/test_assets/google_sheet_responses.json", 'r') as f:
-    results = json.load(f)
-
-
 def test_google_sheet_message_factory():
+    with open(root_dir + "/../tests/message_generation/test_assets/google_sheet_responses.json", 'r') as f:
+        results = json.load(f)
+
     with patch('flip_sign.message_generation.build') as build_mock:
         build_mock.return_value.spreadsheets.return_value.values.return_value.get.return_value.execute.return_value = \
             results
@@ -122,3 +169,30 @@ def test_google_sheet_message_factory():
             assert_message_gen_objects_equal(answer, output)
 
         assert not outputs[3]  # confirm display=False for the message with bad function
+
+
+harder_test_answers = [
+    msg_gen.BasicTextMessage(text='Test other\\nkwargs', wrap_text=False),
+    msg_gen.BasicTextMessage(text="Test No First Argument"),
+    msg_gen.GoogleDriveImageMessageFactory(drive_folder="fhqwhgads in parents"),
+    msg_gen.RecurringFixedDateMessage(description='Christmas', base_date_start='1999-12-25'),
+    msg_gen.DateMatchTextMessage(text="This is Date-Match")
+]
+
+
+def test_harder_google_sheet_message_factory():
+    with open(root_dir + "/../tests/message_generation/test_assets/google_sheet_responses_harder.json", 'r') as f:
+        results = json.load(f)
+
+    with patch('flip_sign.message_generation.build') as build_mock:
+        build_mock.return_value.spreadsheets.return_value.values.return_value.get.return_value.execute.return_value = \
+            results
+
+        factory = msg_gen.GoogleSheetMessageFactory(sheet_id="blurgh")
+
+        outputs = factory.generate_messages()
+
+        assert len(outputs) == len(harder_test_answers)
+
+        for answer, output in zip(harder_test_answers, outputs):
+            assert_message_gen_objects_equal(answer, output)

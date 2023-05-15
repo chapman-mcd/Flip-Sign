@@ -936,6 +936,11 @@ class GoogleSheetMessageFactory(MessageFactory):
                         kwargs_out[key] = message_objects_ref[item]
                     else:
                         kwargs_out[key] = item
-            messages_out.append(message_obj(row[1], **kwargs_out))  # no try/except as __init__ must not throw error
+
+            args_out = []
+            if not row[1] == '':
+                args_out.append(row[1])
+
+            messages_out.append(message_obj(*args_out, **kwargs_out))  # no try/except as __init__ must not throw error
 
         return messages_out
