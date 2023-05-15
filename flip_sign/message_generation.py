@@ -273,21 +273,46 @@ class RecurringFixedDateMessage(DateMessage):
     """
     A class for date messages which recur on the same calendar date every year (e.g. New Year's Day on January 1st)
     """
-    def __init__(self, description: str, base_date_start: datetime.datetime, base_date_end: datetime.datetime,
-                 all_day: bool, frequency: Union[float, callable] = linear_decline_frequency_date_message):
+    def __init__(self, description: str, base_date_start: Union[datetime.datetime, str],
+                 base_date_end: Optional[Union[datetime.datetime, str]] = None, all_day: bool = True,
+                 frequency: Union[float, callable] = linear_decline_frequency_date_message):
         """
         Initializes the message.
 
         :param description: (str): the text which describes the event.
-        :param base_date_start: (datetime.datetime): when the event starts, in an arbitrary year.
-        :param base_date_end: (datetime.datetime): when the event ends, in the same year as base_date_start
+        :param base_date_start: (datetime.datetime or ISO8601 string): when event starts, in an arbitrary year.
+        :param base_date_end: (datetime.datetime or ISO8601 string): when event ends, in same year as base_date_start
         :param all_day: (bool): whether the event is an all-day event
         :param frequency: (callable or float):  if float, the chance the message will display.
                                         if callable, single argument is number of days until event start (float)
         """
         self.description = description
-        self.base_start = base_date_start
-        self.base_end = base_date_end
+
+        # process start and end dates
+        try:
+            if isinstance(base_date_start, str):
+                self.base_start = datetime.datetime.fromisoformat(base_date_start)
+            elif hasattr(base_date_start, "time"):  # must use time attr as proxy for testing datetime.datetime instance
+                self.base_start = base_date_start
+            else:
+                raise ValueError("base_date_start must be datetime.datetime or ISO8601 string")
+
+            if base_date_end is None:
+                self.base_end = self.base_start
+            else:
+                if isinstance(base_date_end, str):
+                    self.base_end = datetime.datetime.isoformat(base_date_end)
+                elif hasattr(base_date_end, "time"):
+                    self.base_end = base_date_end
+                else:
+                    raise ValueError("base_date_end must be datetime.datetime or ISO8601 string")
+
+        except ValueError as e:
+            self.display = False
+            message_gen_logger.warning("Error processing dates in message: " + self.description)
+            message_gen_logger.warning("Error message:" + str(e))
+            return
+
         self.all_day = all_day
         self.draw_text_kws = date_message_text_kws
 
