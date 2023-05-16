@@ -857,3 +857,20 @@ def download_file_google_drive(file_id: str, out_path: Union[str, pathlib.Path],
     while done is False:
         status, done = downloader.next_chunk()
         helper_logger.info("Downloading file " + out_path + "progress: " + str(status.progress()))
+
+
+def is_timezone_naive(d: dt.datetime):
+    """
+    Determines whether a given datetime object is time-zone naive or not.  Per the datetime docs at:
+    https://docs.python.org/3/library/datetime.html#determining-if-an-object-is-aware-or-naive
+
+    :param d: (datetime.datetime) the object in question
+    :return: (bool) whether the object is timezone-naive or not.
+    """
+
+    try:
+        utcoffset = d.tzinfo.utcoffset(d) is None
+    except AttributeError:
+        utcoffset = False
+
+    return d.tzinfo is None and not utcoffset

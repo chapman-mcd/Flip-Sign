@@ -292,6 +292,8 @@ class RecurringFixedDateMessage(DateMessage):
         try:
             if isinstance(base_date_start, str):
                 self.base_start = datetime.datetime.fromisoformat(base_date_start)
+                if hlp.is_timezone_naive(self.base_start):
+                    self.base_start = self.base_start.replace(tzinfo=LOCAL_TIMEZONE)
             elif hasattr(base_date_start, "time"):  # must use time attr as proxy for testing datetime.datetime instance
                 self.base_start = base_date_start
             else:
@@ -302,6 +304,8 @@ class RecurringFixedDateMessage(DateMessage):
             else:
                 if isinstance(base_date_end, str):
                     self.base_end = datetime.datetime.isoformat(base_date_end)
+                    if hlp.is_timezone_naive(self.base_end):
+                        self.base_end = self.base_end.replace(tzinfo=LOCAL_TIMEZONE)
                 elif hasattr(base_date_end, "time"):
                     self.base_end = base_date_end
                 else:

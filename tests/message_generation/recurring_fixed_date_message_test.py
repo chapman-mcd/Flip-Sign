@@ -71,10 +71,17 @@ def test_new_defaults(message_gen_datetime, helpers_datetime):
             assert image_equal(answer, test_result)
 
 
-def test_provide_christmas_as_date_string():
+
+@patch(f'{flip_sign.message_generation.__name__}.datetime', wraps=datetime)
+@patch(f'{flip_sign.helpers.__name__}.dt', wraps=datetime)
+def test_provide_christmas_as_date_string(message_gen_datetime, helpers_datetime):
     # test christmas in 2 days
-    test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start="1999-12-25", frequency=1.0)
-    assert test_msg.base_start == datetime.datetime(1999, 12, 25)
+    fake_now = datetime.datetime(year=1999, month=12, day=23, hour=18, minute=15)
+    helpers_datetime.datetime.now.return_value = fake_now
+    message_gen_datetime.datetime.now.return_value = fake_now
+    test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start="1999-12-25")
+    assert test_msg.base_start == datetime.datetime(1999, 12, 25).replace(tzinfo=LOCAL_TIMEZONE)
+    assert test_msg
 
 
 @patch(f'{flip_sign.message_generation.__name__}.datetime', wraps=datetime)
@@ -86,7 +93,6 @@ def test_provide_christmas_as_datetime_string(message_gen_datetime, helpers_date
         fake_now = datetime.datetime(year=1999, month=12, day=27, hour=18, minute=15)
         helpers_datetime.datetime.now.return_value = fake_now
         message_gen_datetime.datetime.now.return_value = fake_now
-        christmas_start = datetime.datetime(year=2001, month=12, day=25).replace(tzinfo=LOCAL_TIMEZONE)
         test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start="1999-12-25T11:35:57-08:00",
                                              frequency=1.0)
         test_msg.render()
