@@ -944,3 +944,28 @@ class GoogleSheetMessageFactory(MessageFactory):
             messages_out.append(message_obj(*args_out, **kwargs_out))  # no try/except as __init__ must not throw error
 
         return messages_out
+
+
+def recursive_message_generate(to_be_processed):
+    """
+    Recursively processes the Message and MessageFactory objects in to_be_processed until all MessageFactory objects
+    have been called.  Returns a list of purely Message objects.
+
+    :param to_be_processed: (list) a list of Message and/or MessageFactory objects
+    :return: (list) a list of Message objects
+    """
+
+    # end recursion condition - length 1 and is a message
+    if len(to_be_processed) == 1:
+        if hasattr(to_be_processed[0], "display"):  # use display attribute to test if obj is a Message
+            return to_be_processed
+        else:  # must be a message factory - continue recursion using output of message factory
+            return recursive_message_generate(to_be_processed[0].generate_messages())
+
+    else:
+        # continue recursion - for message objects prepend them to the return and process the rest
+        if hasattr(to_be_processed[0], "display"):
+            return [to_be_processed[0]] + recursive_message_generate(to_be_processed[1:])
+        # for message factory objects generate their messages and process those along with the remainder
+        else:
+            return recursive_message_generate(to_be_processed[0].generate_messages() + to_be_processed[1:])

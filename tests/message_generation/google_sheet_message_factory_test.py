@@ -1,5 +1,6 @@
 import flip_sign.message_generation as msg_gen
 from flip_sign.variable_date_functions import mlk_day
+from tests.helpers.draw_text_test import image_equal
 from flip_sign.assets import root_dir
 from unittest.mock import patch
 import json
@@ -119,6 +120,50 @@ def assert_date_match_text_message_equal(first_message: msg_gen.DateMatchTextMes
     assert first_message.text == second_message.text
 
 
+def assert_image_message_equal(first_message: msg_gen.ImageMessage, second_message: msg_gen.ImageMessage):
+    """
+    Asserts that two ImageMessage objects are equal, for the purposes of unit testing.
+
+    :param first_message: (ImageMessage) the left message
+    :param second_message: (ImageMessage) the right message
+    :return: None
+    """
+
+    assert image_equal(first_message.get_image(), second_message.get_image())
+
+
+def assert_ephemeral_date_message_equal(first_message: msg_gen.EphemeralDateMessage,
+                                        second_message: msg_gen.EphemeralDateMessage):
+    """
+    Asserts that two EphemeralDateMessage objects are equal, for the purposes of unit testing.
+
+    :param first_message: (EphemeralDateMessage) the left message
+    :param second_message: (EphemeralDateMessage) the right message
+    :return: None
+    """
+
+    assert first_message.description == second_message.description
+    assert first_message.start == second_message.start
+    assert first_message.end == second_message.end
+    assert first_message.all_day == second_message.all_day
+
+
+def assert_accuweather_dashboard_equal(first_message: msg_gen.AccuweatherDashboard,
+                                       second_message: msg_gen.AccuweatherDashboard):
+    """
+    Asserts that two AccuweatherDashboard message objects are equal, for the purposes of unit testing.
+
+    :param first_message: (AccuweatherDashboard) the left message
+    :param second_message: (AccuweatherDashboard) the right message
+    :return: None
+    """
+
+    assert first_message.location == second_message.location
+    assert first_message.description == second_message.description
+    assert first_message.start_date == second_message.start_date
+    assert first_message.language == second_message.language
+
+
 def assert_message_gen_objects_equal(first_object, second_object):
     """
     Asserts that two message generation objects are equal, for the purposes of unit testing the
@@ -145,8 +190,14 @@ def assert_message_gen_objects_equal(first_object, second_object):
         assert_func = assert_date_match_text_message_equal
     elif isinstance(first_object, msg_gen.GoogleDriveImageMessageFactory):
         assert_func = assert_google_drive_image_message_factory_equal
+    elif isinstance(first_object, msg_gen.ImageMessage):
+        assert_func = assert_image_message_equal
+    elif isinstance(first_object, msg_gen.EphemeralDateMessage):
+        assert_func = assert_ephemeral_date_message_equal
+    elif isinstance(first_object, msg_gen.AccuweatherDashboard):
+        assert_func = assert_accuweather_dashboard_equal
     else:
-        raise NotImplementedError
+        raise ValueError("Unsupported type: " + str(type(first_object)))
 
     assert_func(first_object, second_object)
 
