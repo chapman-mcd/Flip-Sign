@@ -22,6 +22,7 @@ def test_paris_dashboard_basic(api_request_mock):
     assert messages[0].language == "english"
 
     api_request_mock.assert_called()
+    assert type(api_request_mock.call_args[0]) == tuple  # must call with tuple
 
 
 @patch('flip_sign.helpers.accuweather_api_request')

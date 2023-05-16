@@ -808,11 +808,11 @@ class AccuweatherAPIMessageFactory(MessageFactory):
         except ValueError:
             return [BasicTextMessage("Error geocoding location: " + self.location_description, frequency=1.0)]
 
-        url = "".join(["http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?",
-                       "apikey=", keys['AccuweatherAPI'],
-                       "&q=", quote(str(lat) + "," + str(lng))])
+        url = ("http://dataservice.accuweather.com/locations/v1/cities/geoposition/search?",
+               "apikey=", keys['AccuweatherAPI'],
+               "&q=", quote(str(lat) + "," + str(lng)))
 
-        location_response = hlp.accuweather_api_request(url=url)
+        location_response = hlp.accuweather_api_request(url)
 
         # create objects as requested (dashboard, headline, description)
         messages_out = []
