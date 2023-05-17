@@ -1,7 +1,13 @@
 from serial import Serial
+from flip_sign.message_generation import ImageMessage
+import flip_sign.transitions as transitions
 from PIL import Image
 import copy
 import struct
+import logging
+
+logger_name = 'flip_sign.displays'
+displays_logger = logging.getLogger(logger_name)
 
 
 def generate_layout():
@@ -124,9 +130,9 @@ class FlipDotDisplay(object):
         self.empty_state = copy.deepcopy(display)
 
         # initialize current state to all black and then set the display to it
-        self.current_state = Image.new('1', (self.columns, self.rows), 0)
+        self.current_message = ImageMessage(image=Image.new('1', (self.columns, self.rows), 0))
+        self.current_state = self.current_message.get_image()
         self.show(self.current_state)
-        self.current_message = None
 
     def show(self, image: Image.Image):
         """
@@ -181,3 +187,28 @@ class FlipDotDisplay(object):
 
         # write the command to the serial interface
         self.serial_interface.write(cmd_string)
+
+    def update(self, next_message):
+        """
+        Updates the display with the desired next_message.
+
+        :param next_message: (Message) the message to display on the sign
+        :return: (bool) whether the update was successful
+        """
+
+        try:
+            next_message.render()
+        except ValueError as e:
+            displays_logger.warning("Error rendering message.")
+            displays_logger.warning("Full error: " + str(e))
+            return False
+
+        transition_function = transitions.select_transition_function(self.current_message, next_message)
+
+        for state in transition_function(self.current_message, next_message):
+            self.show(image=state)
+
+        self.current_message = next_message
+        self.current_state = next_message.get_image()
+
+        return True
