@@ -8,6 +8,7 @@ from pytz import timezone
 from googleapiclient.discovery import build
 from operator import itemgetter
 from urllib.parse import quote
+from googleapiclient.errors import HttpError
 import ast
 import textwrap
 import flip_sign.helpers as hlp
@@ -921,8 +922,13 @@ class GoogleSheetMessageFactory(MessageFactory):
         """
 
         sheets_service = build('sheets', 'v4', credentials=hlp.get_credentials())
-        sheets_request = sheets_service.spreadsheets().values().get(spreadsheetId=self.sheet_id, range="Messages!A:C")
-        rows = sheets_request.execute()['values']
+        try:
+            sheets_request = sheets_service.spreadsheets().values().get(spreadsheetId=self.sheet_id, range="Messages!A:C")
+            rows = sheets_request.execute()['values']
+        except HttpError as e:
+            message_gen_logger.warning("Error generating messages from google sheet.  Sheet id: " + self.sheet_id)
+            message_gen_logger.warning("Full error: " + str(e))
+            return [BasicTextMessage("Error generating messages from google sheet.  Sheet id: " + self.sheet_id)]
 
         messages_out = []
         for row in rows[1:]:  # skip first row, which is headers

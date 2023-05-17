@@ -3,7 +3,9 @@ from flip_sign.variable_date_functions import mlk_day
 from tests.helpers.draw_text_test import image_equal
 from flip_sign.assets import root_dir
 from unittest.mock import patch
+from googleapiclient.errors import HttpError
 import json
+from collections import namedtuple
 
 answers = [
     msg_gen.BasicTextMessage(text="Test", frequency=1.0),
@@ -247,3 +249,23 @@ def test_harder_google_sheet_message_factory():
 
         for answer, output in zip(harder_test_answers, outputs):
             assert_message_gen_objects_equal(answer, output)
+
+
+# returns HttpError when sheet is not found
+def test_sheet_not_found():
+    with patch('flip_sign.message_generation.build') as build_mock:
+        response_type = namedtuple(typename="response", field_names=['status', 'reason'])
+        response = response_type(status=1999, reason="Somebody set us up the bomb.")
+
+        build_mock.return_value.spreadsheets.return_value.values.return_value.get.return_value.execute.side_effect =\
+            HttpError(resp=response, content=b'blurgh')
+
+        factory = msg_gen.GoogleSheetMessageFactory(sheet_id="blurgh")
+
+        outputs = factory.generate_messages()
+
+        assert len(outputs) == 1
+
+        error_text = "Error generating messages from google sheet.  Sheet id: " + "blurgh"
+
+        assert_message_gen_objects_equal(outputs[0], msg_gen.BasicTextMessage(error_text))
