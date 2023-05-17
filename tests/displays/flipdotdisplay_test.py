@@ -5,6 +5,7 @@ from tests.helpers.draw_text_test import image_equal
 from tests.message_generation.google_sheet_message_factory_test import assert_message_gen_objects_equal
 import flip_sign.transitions as transitions
 from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 from serial import Serial
 from PIL import Image
 
@@ -71,6 +72,24 @@ def test_value_error_handling(transition_function_mock, flip_dot_mock):
     transition_function_mock.return_value = transitions.simple_transition
     next_message_mock = MagicMock(spec=BasicTextMessage)
     next_message_mock.render.side_effect = ValueError  # DateMessages can raise value error if in the past
+
+    serial_mock = MagicMock(spec=Serial)
+    display = FlipDotDisplay(serial_interface=serial_mock)
+    flip_dot_mock.reset_mock()  # clear out the call to show a blank image during setup
+    successful_update = display.update(next_message=next_message_mock)
+
+    assert not successful_update
+    flip_dot_mock.assert_not_called()
+
+
+# test error handling: next_message.render throws URLError (no internet / cable unplugged)
+# Accuweather message renders can throw URLError if internet down
+@patch.object(FlipDotDisplay, attribute="show")
+@patch('flip_sign.displays.transitions.select_transition_function')
+def test_url_error_handling(transition_function_mock, flip_dot_mock):
+    transition_function_mock.return_value = transitions.simple_transition
+    next_message_mock = MagicMock(spec=BasicTextMessage)
+    next_message_mock.render.side_effect = URLError(reason="Somebody set us up the bomb.")
 
     serial_mock = MagicMock(spec=Serial)
     display = FlipDotDisplay(serial_interface=serial_mock)

@@ -1,6 +1,7 @@
 from serial import Serial
 from flip_sign.message_generation import ImageMessage
 import flip_sign.transitions as transitions
+from urllib.error import URLError
 from PIL import Image
 import copy
 import struct
@@ -198,7 +199,7 @@ class FlipDotDisplay(object):
 
         try:
             next_message.render()
-        except ValueError as e:
+        except (ValueError, URLError) as e:
             displays_logger.warning("Error rendering message.")
             displays_logger.warning("Full error: " + str(e))
             return False
