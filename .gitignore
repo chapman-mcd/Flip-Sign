@@ -5,6 +5,7 @@ flip_sign/cache/**
 tests/assets/fonts/**
 tests/assets/keys/**
 tests/assets/cache/**
+tests/integration/*.log
 tests/message_generation/test_assets/google_calendar_responses*
 tests/message_generation/test_assets/google_drive_responses*
 .DS_Store
