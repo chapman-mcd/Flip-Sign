@@ -57,6 +57,14 @@ class Message(object):
         """
         return self.string_rep
 
+    def log_render(self):
+        """
+        Log the fact that the render method is starting.  Must be called by the render method in subclasses.
+
+        :return: None
+        """
+        message_gen_logger.info("Starting render for message: " + str(self))
+
     def render(self):
         """
         The render method must be overridden in subclasses.
@@ -226,6 +234,7 @@ class DateMessage(Message):
         :return: None
         """
 
+        self.log_render()
         next_start, next_end, all_day = self.next_occurrence()
         time_strs = hlp.countdown_format(target_start=next_start, target_end=next_end, all_day=all_day)
         desc_strs = textwrap.wrap(text=self.description, width=14, placeholder=" {}", max_lines=2)
@@ -457,6 +466,7 @@ class BasicTextMessage(Message):
         :return: None
         """
 
+        self.log_render()
         image, params, spacing = hlp.draw_text_best_parameters(params_order=self.font_parameters,
                                                                bbox_size=(168, 21), text=self.text,
                                                                **self.draw_text_kwargs)
@@ -540,6 +550,7 @@ class AccuweatherDescription(BasicTextMessage):
 
         :return: None
         """
+        self.log_render()
         api_request = ('http://dataservice.accuweather.com/forecasts/v1/daily/5day/',
                        self.location['Key'],
                        '?apikey=',
@@ -650,6 +661,7 @@ class AccuweatherDashboard(Message):
         :return: None.
         """
 
+        self.log_render()
         # initialize output
         dashboard_rendered = Image.new(mode="1", size=(168, 21), color=0)
 
