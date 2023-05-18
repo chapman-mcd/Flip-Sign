@@ -6,6 +6,7 @@ import random
 from flip_sign.assets import keys
 from google.auth.exceptions import TransportError
 from urllib.error import URLError
+from PIL import Image
 import config
 import time
 import logging
@@ -38,7 +39,7 @@ def run_sign():
                                                 retry_time.isoformat()))
                 time.sleep(wait_time)
             except Exception as e:
-                display.update("Unexpected error generating messages.  Stopping.  Error: " + str(e))
+                display.update(BasicTextMessage("Unexpected error generating messages.  Stopping.  Error: " + str(e)))
                 raise
 
         run_sign_logger.info("Message list update complete.")
@@ -57,26 +58,29 @@ def run_sign():
                 next_start = datetime.datetime.combine(datetime.date.today(), config.START_TIME)
                 time.sleep((next_start - datetime.datetime.now()).total_seconds())
 
-            # skip messages with display=False
+            # skip messages with display=False and increment init failure if applicable
             if not message:
-                message_init_fails += 1
+                if message.init_failure:
+                    message_init_fails += 1
                 continue
 
             # attempt to update display until successful, counting number of failures
-            successful_update = False
-            message_render_count = 0
-            while not successful_update:
-                successful_update = display.update(message)
-                message_render_count += 1
-            message_render_fails += message_render_count - 1
+            update_successful = display.update(message)
+            if not update_successful:
+                message_render_fails += 1
+                continue
 
             run_sign_logger.info("Sent message {} of {} to sign.".format(i, n_messages))
 
             time.sleep(config.WAIT_TIME.total_seconds())
 
-        # end of cycle through messages
+        # end of cycle through messages - surface errors if there were any
         if message_render_fails > 0 or message_init_fails > 0:
             cycle_message = ("Cycle completed.  Message init failures: {}\nMessage render failures:{}"
                              .format(message_init_fails, message_render_fails))
             display.update(BasicTextMessage(cycle_message, wrap_text=False))
             time.sleep(config.WAIT_TIME.total_seconds())
+
+        # end of cycle flip all yellow then all black
+        display.show(image=Image.new('1', (display.columns, display.rows), 1))
+        display.show(image=Image.new('1', (display.columns, display.rows), 0))
