@@ -828,13 +828,13 @@ class AccuweatherAPIMessageFactory(MessageFactory):
         if self.weather_descriptions:
             messages_out.append(AccuweatherDescription(location=location_response, description=self.description,
                                                        date=self.start_date, day_or_night='day',
-                                                       frequency=self.frequency))
+                                                       frequency=self.frequency, headline=False))
             messages_out.append(AccuweatherDescription(location=location_response, description=self.description,
                                                        date=self.start_date, day_or_night='night',
-                                                       frequency=self.frequency))
+                                                       frequency=self.frequency, headline=False))
             messages_out.append(AccuweatherDescription(location=location_response, description=self.description,
                                                        date=self.start_date + datetime.timedelta(days=1),
-                                                       day_or_night='day', frequency=self.frequency))
+                                                       day_or_night='day', frequency=self.frequency, headline=False))
 
         if self.headline:
             messages_out.append(AccuweatherDescription(location=location_response, description=self.description,

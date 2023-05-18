@@ -39,6 +39,7 @@ def test_paris_dashboard_descriptions(api_request_mock):
         assert type(message) == AccuweatherDescription
         assert message.location == paris_location
         assert message.description == "Saint-Merri"
+        assert not message.headline
         if i in [0, 1]:
             assert message.date == datetime.date.today()
             if i == 0:
