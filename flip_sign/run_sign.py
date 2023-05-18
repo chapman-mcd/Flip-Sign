@@ -1,5 +1,6 @@
 from flip_sign.displays import FlipDotDisplay
 from flip_sign.message_generation import GoogleSheetMessageFactory, recursive_message_generate, BasicTextMessage
+from flip_sign.assets import root_dir
 import serial
 import datetime
 import random
@@ -84,3 +85,9 @@ def run_sign():
         # end of cycle flip all yellow then all black
         display.show(image=Image.new('1', (display.columns, display.rows), 1))
         display.show(image=Image.new('1', (display.columns, display.rows), 0))
+
+
+if __name__ == '__main__':
+    logging.basicConfig(filename=root_dir + "/cache/flip_sign.log",
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+    run_sign()
