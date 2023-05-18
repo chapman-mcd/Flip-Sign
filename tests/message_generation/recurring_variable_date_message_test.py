@@ -86,3 +86,13 @@ def test_recurring_date_bad_function(local_datetime, message_gen_datetime, helpe
                                                 all_day=True)
 
         assert not test_msg
+
+
+def test_string_representation():
+    test_message = RecurringVariableDateMessage(description="Carnaval", next_dates_func=carnaval_date,
+                                                all_day=True, frequency=1.0)
+    answer = ''.join(["RecurringVariableDateMessage: ",
+                      "description=Carnaval, ",
+                      "next_dates_func=<function carnaval_date"])
+
+    assert str(test_message)[:len(answer)] == answer

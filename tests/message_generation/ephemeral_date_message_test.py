@@ -124,4 +124,19 @@ def test_date_message_fully_future(mock_datetime, caplog):
     assert caplog.records[-1].getMessage() == "EphemeralDateMessage fully in the past.  Description:" + test_desc
 
 
+def test_string_rep():
+    test_start = (fake_now - datetime.timedelta(days=3)).replace(tzinfo=LOCAL_TIMEZONE)
+    test_end = (fake_now - datetime.timedelta(days=2)).replace(tzinfo=LOCAL_TIMEZONE)
+    test_desc = "Blurgh"
+    test_msg = EphemeralDateMessage(description=test_desc, start=test_start,
+                                    end=test_end, all_day=False)
+
+    answer = ''.join(["EphemeralDateMessage: ",
+                      "description=" + test_desc + ", ",
+                      "start=" + str(test_start) + ", ",
+                      "end=" + str(test_end)])
+
+    assert str(test_msg) == answer
+
+
 

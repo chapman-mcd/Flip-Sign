@@ -109,3 +109,14 @@ def test_bad_datetime_string(message_gen_datetime, helpers_datetime):
     test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start="lol ISO8601",
                                          frequency=1.0)
     assert not test_msg
+
+
+def test_string_representation():
+    test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start="1999-12-25")
+
+    assert str(test_msg) == "RecurringFixedDateMessage: description=Christmas, base_date_start=1999-12-25"
+
+    christmas_start = datetime.datetime(year=2001, month=12, day=25).replace(tzinfo=LOCAL_TIMEZONE)
+    test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start=christmas_start, frequency=1.0)
+
+    assert str(test_msg) == "RecurringFixedDateMessage: description=Christmas, base_date_start=" + str(christmas_start)

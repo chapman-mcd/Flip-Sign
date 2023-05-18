@@ -75,3 +75,22 @@ def test_logging_with_bad_input(caplog):
     assert not test_msg
     correct_log_response = "Improper WeatherDescription construction.  Location:" + str(nameless_tn_location_resp)
     assert caplog.records[-1].getMessage() == correct_log_response
+
+
+@patch(f'{flip_sign.message_generation.__name__}.hlp.accuweather_api_request',
+       wraps=flip_sign.helpers.accuweather_api_request)
+def test_string_rep(mock_accuweather):
+    with open("./message_generation/test_assets/NamelessTN_5DayForecast_Metric.txt") as f:
+        nameless_tn_forecast_resp = json.loads(f.read())
+        mock_accuweather.return_value = nameless_tn_forecast_resp
+        locstr = nameless_tn_location_resp['LocalizedName']
+
+    test_msg = AccuweatherDescription(location=nameless_tn_location_resp, headline=True)
+
+    string_answer = ''.join(["AccuweatherDescription: ",
+                             "description=" + locstr + ", ",
+                             "headline=True, ",
+                             "date=None, day_or_night=Day"])
+
+    assert str(test_msg) == string_answer
+

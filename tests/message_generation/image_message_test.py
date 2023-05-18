@@ -80,3 +80,16 @@ def test_bad_input(caplog):
     test = ImageMessage(not_image_file, 1.0)
     assert not test
     assert caplog.records[-1].getMessage() == "Error opening image. Image:" + str(not_image_file)
+
+
+def test_string_rep():
+    with Image.open("./helpers/test_assets/signscape_1.png").convert("1") as answer:
+        image_message = ImageMessage(image=answer)
+
+        answer = "ImageMessage: image=<PIL.Image.Image image"
+
+        assert str(image_message)[:len(answer)] == answer
+
+    rickroll_path = Path("./helpers/test_assets/rickroll.jpeg")
+    rickroll = ImageMessage(rickroll_path, 1.0)
+    assert str(rickroll) == "ImageMessage: image=" + str(rickroll_path)

@@ -26,6 +26,7 @@ dat_dot_path = fonts['DatDot']
 
 LOCAL_TIMEZONE = timezone(get_localzone_name())
 
+
 class Message(object):
     """
     A base message class for branching into subclasses.  Only the display randomization elements and get_image method
@@ -47,6 +48,14 @@ class Message(object):
         :return: (boolean) whether the message displays.
         """
         return self.display
+
+    def __str__(self):
+        """
+        Message string representation will be set by each subclass.
+
+        :return: (str) the string representation of the message
+        """
+        return self.string_rep
 
     def render(self):
         """
@@ -96,6 +105,8 @@ class ImageMessage(Message):
         :param frequency: (callable or float)  a float probability to display or callable to generate said probability
                            if callable, must accept the companion image parameter as a single argument
         """
+
+        self.string_rep = "ImageMessage: image=" + str(image)
 
         if callable(frequency):
             try:
@@ -245,6 +256,10 @@ class EphemeralDateMessage(DateMessage):
         self.end = end
         self.all_day = all_day
         self.draw_text_kws = date_message_text_kws
+        self.string_rep = ''.join(["EphemeralDateMessage: ",
+                                   "description=" + self.description + ", ",
+                                   "start=" + str(self.start) + ", ",
+                                   "end=" + str(self.end)])
 
         if all_day:
             self.end = self.end.replace(hour=23, minute=59, second=59)
@@ -288,6 +303,9 @@ class RecurringFixedDateMessage(DateMessage):
                                         if callable, single argument is number of days until event start (float)
         """
         self.description = description
+        self.string_rep = ''.join(['RecurringFixedDateMessage: ',
+                                   "description=" + self.description + ", ",
+                                   "base_date_start=" + str(base_date_start)])
 
         # process start and end dates
         try:
@@ -369,6 +387,9 @@ class RecurringVariableDateMessage(DateMessage):
         self.next_dates_func = next_dates_func
         self.all_day = all_day
         self.draw_text_kws = date_message_text_kws
+        self.string_rep = ''.join(["RecurringVariableDateMessage: ",
+                                   "description=" + self.description + ", ",
+                                   "next_dates_func=" + str(self.next_dates_func)])
 
         super().__init__(frequency)
 
@@ -425,6 +446,7 @@ class BasicTextMessage(Message):
         self.draw_text_kwargs = kwargs
         self.applied_spacing = None
         self.applied_params = None
+        self.string_rep = "BasicTextMessage: text=" + str(self.text)
 
         super().__init__(frequency=frequency)
 
@@ -458,8 +480,10 @@ class DateMatchTextMessage(BasicTextMessage):
         :param text: (str or list): the text to be displayed in the message
         :param frequency: (float): the probability that the message will display
         """
+
         super().__init__(text=text, font_parameters=[date_message_wrap_params], frequency=frequency, vertical_align=1,
                          horizontal_align=3, text_align='left', fixed_spacing=1, wrap_text=True)
+        self.string_rep = "DateMatchTextMessage: text=" + str(text)
 
 
 class AccuweatherDescription(BasicTextMessage):
@@ -498,6 +522,12 @@ class AccuweatherDescription(BasicTextMessage):
 
         # initialize with blank text which will be replaced in the render method
         super().__init__(text='', font_parameters=font_parameters, frequency=frequency, **kwargs)
+
+        self.string_rep = ''.join(["AccuweatherDescription: ",
+                                   "description=" + self.description + ", ",
+                                   "headline=" + str(self.headline) + ", ",
+                                   "date=" + str(self.date) + ", ",
+                                   "day_or_night=" + self.day_or_night])
 
         if not self.headline and self.date is None:
             self.display = False
@@ -592,6 +622,10 @@ class AccuweatherDashboard(Message):
             self.description = description
         else:
             self.description = self.location['LocalizedName']
+
+        self.string_rep = ''.join(["AccuweatherDashboard: ",
+                                   "description=" + self.description + ", ",
+                                   "start_date=" + str(self.start_date)])
 
         self.weather_icon_lookup = {
                                     1: 'sunny', 2: 'sunny',

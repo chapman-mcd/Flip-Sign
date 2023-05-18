@@ -89,3 +89,12 @@ def test_weather_dashboard_output(mock_datetime, mock_accuweather):
 
         with Image.open(out_path) as test_result:
             assert image_equal(answer, test_result)
+
+
+def test_string_rep():
+    fake_now = datetime.datetime(year=2023, month=2, day=9, hour=7, minute=15, second=38)
+    fake_today = fake_now.date()
+    test_msg = AccuweatherDashboard(location=nameless_tn_location_resp, description="Casa", start_date=fake_today,
+                                    language="portugues", frequency=1.0)
+
+    assert str(test_msg) == "AccuweatherDashboard: description=Casa, start_date=" + str(fake_today)

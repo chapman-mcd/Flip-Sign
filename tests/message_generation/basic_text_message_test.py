@@ -100,3 +100,7 @@ def test_basic_text_message():
             assert image_equal(answer, test_result)
 
 
+def test_string_representation():
+    test_msg = BasicTextMessage(text="This is a test.")
+
+    assert str(test_msg) == "BasicTextMessage: text=This is a test."

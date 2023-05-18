@@ -23,3 +23,15 @@ def test_date_match_message():
 
         with Image.open(out_path) as test_result:
             assert image_equal(answer, test_result)
+
+
+def test_string_rep():
+    test_text = "O mar tá bonito tá cheio de caminho"
+    test_msg = DateMatchTextMessage(test_text)
+
+    assert str(test_msg) == "DateMatchTextMessage: text=" + test_text
+
+    test_list = ["Two line", "message"]
+    test_msg = DateMatchTextMessage(test_list)
+
+    assert str(test_msg) == "DateMatchTextMessage: text=" + str(test_list)
