@@ -17,6 +17,7 @@ def test_bad_frequency(caplog):
     test = EphemeralDateMessage(description="Blurgh", start=dt_now - interval, end=dt_now + interval,
                                 all_day=False, frequency=None)
     assert not test
+    assert test.init_failure
     assert caplog.records[-1].getMessage() == "Frequency must be float or callable.  Frequency:" + str(None)
 
 
@@ -26,6 +27,7 @@ def test_all_dates_in_past(caplog):
     test = EphemeralDateMessage(description="Blurgh", start=dt_now - interval*2, end=dt_now - interval,
                                 all_day=False, frequency=1.0)
     assert not test
+    assert test.init_failure
     assert caplog.records[-1].getMessage() == "EphemeralDateMessage fully in the past.  Description:" + "Blurgh"
 
 
@@ -121,6 +123,7 @@ def test_date_message_fully_future(mock_datetime, caplog):
     test_msg = EphemeralDateMessage(description=test_desc, start=test_start,
                                     end=test_end, all_day=False)
     assert not test_msg
+    assert test_msg.init_failure
     assert caplog.records[-1].getMessage() == "EphemeralDateMessage fully in the past.  Description:" + test_desc
 
 

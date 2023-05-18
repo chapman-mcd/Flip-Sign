@@ -74,6 +74,7 @@ def test_recurring_date_bad_function(local_datetime, message_gen_datetime, helpe
                                                 all_day=True)
 
         assert not test_msg
+        assert test_msg.init_failure
 
     # test improper function
     with Image.open('./message_generation/test_assets/Test_Variable_01.png') as answer:
@@ -86,6 +87,7 @@ def test_recurring_date_bad_function(local_datetime, message_gen_datetime, helpe
                                                 all_day=True)
 
         assert not test_msg
+        assert test_msg.init_failure
 
 
 def test_string_representation():

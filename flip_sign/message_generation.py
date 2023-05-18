@@ -40,6 +40,7 @@ class Message(object):
         """
         self.display = random.random() < frequency
         self.image = None
+        self.init_failure = False
 
     def __bool__(self):
         """
@@ -260,6 +261,7 @@ class EphemeralDateMessage(DateMessage):
         :param frequency: (callable or float):  if float, the chance the message will display.
                                                 if callable, single argument is number of days until event start (float)
         """
+        self.init_failure = True
         self.description = description
         self.start = start
         self.end = end
@@ -311,6 +313,7 @@ class RecurringFixedDateMessage(DateMessage):
         :param frequency: (callable or float):  if float, the chance the message will display.
                                         if callable, single argument is number of days until event start (float)
         """
+        self.init_failure = True
         self.description = description
         self.string_rep = ''.join(['RecurringFixedDateMessage: ',
                                    "description=" + self.description + ", ",
@@ -392,6 +395,7 @@ class RecurringVariableDateMessage(DateMessage):
                                             if callable, single argument is number of days until event start (float)
         """
 
+        self.init_failure = True
         self.description = description
         self.next_dates_func = next_dates_func
         self.all_day = all_day
@@ -450,6 +454,7 @@ class BasicTextMessage(Message):
         :param kwargs: (captured as dict): passed to draw_text_best_parameters
         """
 
+        self.init_failure = True
         self.text = text
         self.font_parameters = font_parameters
         self.draw_text_kwargs = kwargs
@@ -517,6 +522,7 @@ class AccuweatherDescription(BasicTextMessage):
         :param kwargs: kwargs: (captured as dict): passed to draw_text_best_parameters
         """
 
+        self.init_failure = True
         self.location = location.copy()
         self.headline = headline
         # standardize type to datetime.date
@@ -541,6 +547,7 @@ class AccuweatherDescription(BasicTextMessage):
 
         if not self.headline and self.date is None:
             self.display = False
+            self.init_failure = True
             message_gen_logger.warning("Improper WeatherDescription construction.  Location:" + str(location))
 
     def render(self):
@@ -620,6 +627,7 @@ class AccuweatherDashboard(Message):
         :param frequency: (float): the probability that the message will display
         """
 
+        self.init_failure = True
         self.location = location.copy()
         self.language = language
         # standardize type to datetime.date

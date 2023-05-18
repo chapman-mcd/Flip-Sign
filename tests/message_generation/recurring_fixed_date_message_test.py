@@ -109,6 +109,7 @@ def test_bad_datetime_string(message_gen_datetime, helpers_datetime):
     test_msg = RecurringFixedDateMessage(description="Christmas", base_date_start="lol ISO8601",
                                          frequency=1.0)
     assert not test_msg
+    assert test_msg.init_failure
 
 
 def test_string_representation():

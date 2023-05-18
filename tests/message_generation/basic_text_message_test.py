@@ -15,6 +15,7 @@ def test_basic_text_message():
         out_path = './message_generation/test_output/Test_Basic_01.png'
         text = "You"
         test_msg = BasicTextMessage(text=text, frequency=1)
+        assert not test_msg.init_failure
         test_msg.render()
         test_msg.get_image().save(out_path)
         assert test_msg.applied_params == basic_text_default_wrap_params[0]
@@ -27,6 +28,7 @@ def test_basic_text_message():
         out_path = './message_generation/test_output/Test_Basic_02.png'
         text = "You wrote a"
         test_msg = BasicTextMessage(text=text, frequency=1)
+        assert not test_msg.init_failure
         test_msg.render()
         test_msg.get_image().save(out_path)
         assert test_msg.applied_params == basic_text_default_wrap_params[1]
@@ -40,6 +42,7 @@ def test_basic_text_message():
         out_path = './message_generation/test_output/Test_Basic_03.png'
         text = "You wrote a note with chalk on my"
         test_msg = BasicTextMessage(text=text, frequency=1)
+        assert not test_msg.init_failure
         test_msg.render()
         test_msg.get_image().save(out_path)
         assert test_msg.applied_params == basic_text_default_wrap_params[2]

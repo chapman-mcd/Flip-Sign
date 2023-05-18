@@ -73,6 +73,7 @@ def test_weather_description(mock_datetime, mock_accuweather):
 def test_logging_with_bad_input(caplog):
     test_msg = AccuweatherDescription(location=nameless_tn_location_resp, headline=False)
     assert not test_msg
+    assert test_msg.init_failure
     correct_log_response = "Improper WeatherDescription construction.  Location:" + str(nameless_tn_location_resp)
     assert caplog.records[-1].getMessage() == correct_log_response
 
