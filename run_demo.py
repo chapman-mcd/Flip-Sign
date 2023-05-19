@@ -8,6 +8,7 @@ from unittest.mock import patch, MagicMock
 import datetime
 import serial
 from PIL import Image
+import time
 
 
 mock_serial = input("Mock serial interface?:(y/n)").lower()[0] == 'y'
@@ -162,6 +163,7 @@ display = FlipDotDisplay(serial_interface=serial_interface)
 def run_show():
     for message in messages:
         display.update(message)
+        time.sleep(3)
 
 
 with patch('flip_sign.message_generation.hlp.accuweather_api_request') as accuweather_mock:
