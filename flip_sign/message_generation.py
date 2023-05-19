@@ -16,7 +16,7 @@ import flip_sign.variable_date_functions as vdf
 import random
 import datetime
 import logging
-import config
+import flip_sign.config as config
 
 logger_name = 'flip_sign.message_generation'
 message_gen_logger = logging.getLogger(logger_name)

@@ -6,7 +6,7 @@ from unittest.mock import patch
 import datetime
 import serial
 from PIL import Image
-import config
+import flip_sign.config as config
 import logging
 
 initial_sheet = input("Enter sheet_id for initial google sheet:")

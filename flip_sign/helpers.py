@@ -304,7 +304,7 @@ def add_months(date, num_months):
     return new_date
 
 
-def text_bbox_size(font: ImageFont, text: list or str, line_spacing: int, align: str):
+def text_bbox_size(font: ImageFont, text: Union[list, str], line_spacing: int, align: str):
     """
     Calculates the size of a message, in pixels.  Takes in a message (split into lines) and font parameters.
     Returns the size of the written message in pixels, and the appropriate target such that the first pixel of the
@@ -564,7 +564,7 @@ wrap_parameter_set = namedtuple('wrap_parameter_set',
                                 defaults=[None, None, False, None, False, {}])
 
 
-def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: str | list,
+def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: Union[str, list],
                               vertical_align: Union[Literal['center'], int] = 'center',
                               horizontal_align: Union[Literal['center'], int] = 'center',
                               text_align: Literal['left', 'center', 'right'] = 'center', fixed_spacing: int = None,

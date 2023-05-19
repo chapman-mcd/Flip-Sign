@@ -8,7 +8,7 @@ from flip_sign.assets import keys
 from google.auth.exceptions import TransportError
 from urllib.error import URLError
 from PIL import Image
-import config
+import flip_sign.config as config
 import time
 import logging
 
