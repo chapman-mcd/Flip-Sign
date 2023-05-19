@@ -2,6 +2,7 @@ flip_sign/assets/fonts/**
 flip_sign/assets/keys/**
 flip_sign/assets/cache/**
 flip_sign/cache/**
+!flip_sign/cache/google_drive_images/Nyan_Cat_Signscape.png
 tests/assets/fonts/**
 tests/assets/keys/**
 tests/assets/cache/**
