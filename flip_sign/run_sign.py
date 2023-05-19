@@ -16,6 +16,21 @@ run_sign_logger = logging.getLogger(name="flip_sign.run_sign")
 
 
 def run_sign():
+    # logging setup
+    fh = logging.FileHandler(filename=root_dir + "/cache/flip_sign.log")
+    fh.setLevel(logging.DEBUG)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(fmt=formatter)
+    ch.setFormatter(fmt=formatter)
+
+    logging.getLogger('').addHandler(fh)
+    logging.getLogger('').addHandler(ch)
+
+    # base variables and objects
     config.HOME_LOCATION = input("Enter zip code for home location:")
 
     port = "/dev/ttyS0"
@@ -23,6 +38,7 @@ def run_sign():
                                      timeout=1, stopbits=serial.STOPBITS_ONE)
     display = FlipDotDisplay(serial_interface=serial_interface)
 
+    # main "event" loop
     while True:
         # update message list
         updated = False
@@ -88,6 +104,4 @@ def run_sign():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(filename=root_dir + "/cache/flip_sign.log",
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
     run_sign()
