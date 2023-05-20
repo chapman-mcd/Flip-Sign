@@ -98,3 +98,30 @@ def test_url_error_handling(transition_function_mock, flip_dot_mock):
 
     assert not successful_update
     flip_dot_mock.assert_not_called()
+
+
+# test display.cycle_dots method
+@patch('time.sleep')
+@patch.object(FlipDotDisplay, attribute="show")
+def test_cycle_dots(flip_dot_mock, time_mock):
+    serial_mock = MagicMock(spec=Serial)
+    display = FlipDotDisplay(serial_interface=serial_mock)
+    next_message = BasicTextMessage("This is a test.  This is only a test.")
+    display.update(next_message=next_message)
+    flip_dot_mock.reset_mock()
+
+    display.cycle_dots()
+
+    assert len(time_mock.call_args_list) == 3
+    assert len(flip_dot_mock.call_args_list) == 3
+    for i, (args, kwargs) in enumerate(flip_dot_mock.call_args_list):
+        if i == 1:
+            assert image_equal(kwargs['image'], Image.new('1', (168, 21), 1))
+        else:
+            image_equal(kwargs['image'], Image.new('1', (168, 21), 0))
+
+    assert image_equal(display.current_state, Image.new('1', (168, 21), 0))
+    blank_image_message = ImageMessage(image=Image.new('1', (168, 21), 0))
+    assert_message_gen_objects_equal(display.current_message, blank_image_message)
+
+

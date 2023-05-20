@@ -6,6 +6,7 @@ from PIL import Image
 import copy
 import struct
 import logging
+import time
 
 logger_name = 'flip_sign.displays'
 displays_logger = logging.getLogger(logger_name)
@@ -213,3 +214,20 @@ class FlipDotDisplay(object):
         self.current_state = next_message.get_image()
 
         return True
+
+    def cycle_dots(self):
+        """
+        Display all black, then all yellow, then all black again.  Used at end of cycle to make sure
+        all pixels get some exercise.
+
+        :return: None
+        """
+
+        self.show(image=Image.new('1', (168, 21), 0))
+        time.sleep(0.5)
+        self.show(image=Image.new('1', (168, 21), 1))
+        time.sleep(0.5)
+        self.show(image=Image.new('1', (168, 21), 0))
+        time.sleep(0.5)
+        self.current_message = ImageMessage(image=Image.new('1', (self.columns, self.rows), 0))
+        self.current_state = self.current_message.get_image()

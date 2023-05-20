@@ -99,8 +99,7 @@ def run_sign():
             time.sleep(config.WAIT_TIME.total_seconds())
 
         # end of cycle flip all yellow then all black
-        display.show(image=Image.new('1', (display.columns, display.rows), 1))
-        display.show(image=Image.new('1', (display.columns, display.rows), 0))
+        display.cycle_dots()
 
 
 if __name__ == '__main__':
