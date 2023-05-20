@@ -831,7 +831,7 @@ class AccuweatherAPIMessageFactory(MessageFactory):
     """
     def __init__(self, location_description: str, headline: bool = False, description: Optional[str] = None,
                  weather_descriptions: bool = False, weather_dashboard: bool = True,
-                 start_date: datetime.date = datetime.date.today(), frequency: float = 1.0):
+                 start_date: Optional[datetime.date] = None, frequency: float = 1.0):
         """
         Initializes the factory - saves variables to be ready for the generate_messages call.
 
@@ -849,7 +849,10 @@ class AccuweatherAPIMessageFactory(MessageFactory):
         self.description = description
         self.weather_descriptions = weather_descriptions
         self.weather_dashboard = weather_dashboard
-        self.start_date = start_date
+        if start_date is None:
+            self.start_date = datetime.date.today()
+        else:
+            self.start_date = start_date
         self.frequency = frequency
 
         self.logging_str = "AccuweatherMessageFactory: " + location_description
