@@ -1,0 +1,69 @@
+{
+   "results" : [
+      {
+         "address_components" : [
+            {
+               "long_name" : "22241-125",
+               "short_name" : "22241-125",
+               "types" : [ "postal_code" ]
+            },
+            {
+               "long_name" : "Rua Cosme Velho",
+               "short_name" : "R. Cosme Velho",
+               "types" : [ "route" ]
+            },
+            {
+               "long_name" : "Cosme Velho",
+               "short_name" : "Cosme Velho",
+               "types" : [ "political", "sublocality", "sublocality_level_1" ]
+            },
+            {
+               "long_name" : "Rio de Janeiro",
+               "short_name" : "Rio de Janeiro",
+               "types" : [ "administrative_area_level_2", "political" ]
+            },
+            {
+               "long_name" : "Rio de Janeiro",
+               "short_name" : "RJ",
+               "types" : [ "administrative_area_level_1", "political" ]
+            },
+            {
+               "long_name" : "Brazil",
+               "short_name" : "BR",
+               "types" : [ "country", "political" ]
+            }
+         ],
+         "formatted_address" : "R. Cosme Velho - Cosme Velho, Rio de Janeiro - RJ, 22241-125, Brazil",
+         "geometry" : {
+            "bounds" : {
+               "northeast" : {
+                  "lat" : -22.9381132,
+                  "lng" : -43.1950036
+               },
+               "southwest" : {
+                  "lat" : -22.9409218,
+                  "lng" : -43.2001843
+               }
+            },
+            "location" : {
+               "lat" : -22.9404548,
+               "lng" : -43.19726319999999
+            },
+            "location_type" : "APPROXIMATE",
+            "viewport" : {
+               "northeast" : {
+                  "lat" : -22.9381132,
+                  "lng" : -43.1950036
+               },
+               "southwest" : {
+                  "lat" : -22.9409218,
+                  "lng" : -43.2001843
+               }
+            }
+         },
+         "place_id" : "ChIJmaYT9MZ_mQARZtfqEael95c",
+         "types" : [ "postal_code" ]
+      }
+   ],
+   "status" : "OK"
+}

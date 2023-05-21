@@ -1,0 +1,13 @@
+# no known specific version requirements for these packages
+beautifulsoup4
+cachetools
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+Pillow
+pyserial
+pytest
+python-dateutil
+pytz
+# tzlocal must be less than version 5 for pytz support
+tzlocal<=4.3
