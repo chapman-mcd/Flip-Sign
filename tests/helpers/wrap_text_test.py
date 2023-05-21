@@ -8,7 +8,7 @@ dat_dot_path = r'../flip_sign/assets/fonts/DatDot_edited_v1.ttf'
 
 def test_size_function():
     # test basic image sizing / targeting
-    font_1 = ImageFont.truetype(press_start_path, size=8)
+    font_1 = ImageFont.truetype(press_start_path, size=8, layout_engine=ImageFont.LAYOUT_BASIC)
     test_text_1 = 'The quick brown fox\njumps over the lazy dog'
     size, draw_target = flip_sign.helpers.text_bbox_size(font=font_1, text=test_text_1, line_spacing=1, align='left')
     assert size == (182, 17) and draw_target == (-1, 0)
@@ -37,12 +37,12 @@ def test_size_function():
     assert size == (39, 80) and draw_target == (0, 0)
 
     # test different size
-    font_2 = ImageFont.truetype(press_start_path, size=18)
+    font_2 = ImageFont.truetype(press_start_path, size=18, layout_engine=ImageFont.LAYOUT_BASIC)
     size, draw_target = flip_sign.helpers.text_bbox_size(font=font_2, text=test_text_1, line_spacing=1, align='left')
     assert size == (410, 38) and draw_target == (-2, 1)
 
     # test a different font
-    font_3 = ImageFont.truetype(dat_dot_path, size=8)
+    font_3 = ImageFont.truetype(dat_dot_path, size=8, layout_engine=ImageFont.LAYOUT_BASIC)
     size, draw_target = flip_sign.helpers.text_bbox_size(font=font_3, text=test_text_1, line_spacing=1, align='left')
     assert size == (91, 14) and draw_target == (-1, -3)
 
@@ -53,12 +53,12 @@ def test_size_function():
     assert size == (287, 35) and draw_target == (0, 0)
 
     # test a font too large for the base canvas size
-    font_4 = ImageFont.truetype(press_start_path, size=90)
+    font_4 = ImageFont.truetype(press_start_path, size=90, layout_engine=ImageFont.LAYOUT_BASIC)
     size, draw_target = flip_sign.helpers.text_bbox_size(font=font_4, text=test_text_5, line_spacing=1, align='left')
     assert size == (3229, 364) and draw_target == (0, 1)
 
     # test a font too large overall
-    font_5 = ImageFont.truetype(dat_dot_path, size=500)
+    font_5 = ImageFont.truetype(dat_dot_path, size=500, layout_engine=ImageFont.LAYOUT_BASIC)
     with pytest.raises(ValueError) as _:
         flip_sign.helpers.text_bbox_size(font=font_5, text=test_text_5, line_spacing=1, align='left')
 

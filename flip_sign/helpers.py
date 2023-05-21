@@ -602,7 +602,8 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: Union
         else:
             line_spacing = wrap_parameters.min_spacing
 
-        font = ImageFont.truetype(wrap_parameters.font_path, size=wrap_parameters.font_size)
+        font = ImageFont.truetype(wrap_parameters.font_path, size=wrap_parameters.font_size,
+                                  layout_engine=ImageFont.LAYOUT_BASIC)
         fits, wrapped = bbox_func(bbox_size=bbox_size, line_spacing=line_spacing, text=text,
                                   split_words=wrap_parameters.split_words, font=font, align=text_align,
                                   **wrap_parameters.wrap_kwargs)
