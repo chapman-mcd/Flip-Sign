@@ -571,9 +571,15 @@ class AccuweatherDescription(BasicTextMessage):
         else:
             # humanize the date into today/tomorrow/ISO8601
             if self.date == datetime.date.today():
-                date_text = self.description + ":Today(" + self.day_or_night[0] + "): "
+                if self.day_or_night == "Day":
+                    date_text = self.description + ":Today: "
+                else:
+                    date_text = self.description + ":Tonight: "
             elif self.date == datetime.date.today() + datetime.timedelta(days=1):
-                date_text = self.description + ":Tomorrow(" + self.day_or_night[0] + "): "
+                if self.day_or_night == "Day":
+                    date_text = self.description + ":Tomorrow: "
+                else:
+                    date_text = self.description + ":Tomorrow Night: "
             else:
                 date_text = self.description + ":" + self.date.isoformat() + "(" + self.day_or_night[0] + "): "
 

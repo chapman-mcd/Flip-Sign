@@ -31,13 +31,13 @@ def test_weather_description(mock_datetime, mock_accuweather):
                                       day_or_night='day')
     test_msg.render()
     test_msg.get_image().save("./message_generation/test_output/Test_Weather_Desc_02.png")
-    assert test_msg.text == locstr + ":Today(D): " + nameless_tn_forecast_resp['DailyForecasts'][0]['Day']['LongPhrase']
+    assert test_msg.text == locstr + ":Today: " + nameless_tn_forecast_resp['DailyForecasts'][0]['Day']['LongPhrase']
 
     test_msg = AccuweatherDescription(location=nameless_tn_location_resp, headline=False, date=fake_now,
                                       day_or_night='night')
     test_msg.render()
     test_msg.get_image().save("./message_generation/test_output/Test_Weather_Desc_03.png")
-    assert test_msg.text == locstr + ":Today(N): " + \
+    assert test_msg.text == locstr + ":Tonight: " + \
                                                 nameless_tn_forecast_resp['DailyForecasts'][0]['Night']['LongPhrase']
 
     fake_tomorrow = datetime.date(year=2023, month=2, day=10)
@@ -45,7 +45,7 @@ def test_weather_description(mock_datetime, mock_accuweather):
                                       day_or_night='day')
     test_msg.render()
     test_msg.get_image().save("./message_generation/test_output/Test_Weather_Desc_04.png")
-    assert test_msg.text == locstr + ":Tomorrow(D): " + \
+    assert test_msg.text == locstr + ":Tomorrow: " + \
                                                 nameless_tn_forecast_resp['DailyForecasts'][1]['Day']['LongPhrase']
 
     fake_tomorrow = datetime.date(year=2023, month=2, day=11)
@@ -60,7 +60,7 @@ def test_weather_description(mock_datetime, mock_accuweather):
                                       date=fake_now, day_or_night='day')
     test_msg.render()
     test_msg.get_image().save("./message_generation/test_output/Test_Weather_Desc_05.png")
-    assert test_msg.text == "Home:Today(D): " + nameless_tn_forecast_resp['DailyForecasts'][0]['Day']['LongPhrase']
+    assert test_msg.text == "Home:Today: " + nameless_tn_forecast_resp['DailyForecasts'][0]['Day']['LongPhrase']
 
     fake_too_far = datetime.date(year=2050, month=1, day=1)
     with pytest.raises(ValueError) as exc_info:
