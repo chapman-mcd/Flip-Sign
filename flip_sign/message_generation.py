@@ -923,6 +923,8 @@ class GoogleDriveImageMessageFactory(MessageFactory):
         :return: (list): a list of ImageMessage objects from the images in the folder
         """
 
+        self.log_message_gen()
+
         # get list of files in google drive
         drive_service = build('drive', 'v3', credentials=hlp.get_credentials())
 
@@ -983,6 +985,8 @@ class GoogleSheetMessageFactory(MessageFactory):
 
         :return: (list): the messages and message factories as defined in the google sheet
         """
+
+        self.log_message_gen()
 
         sheets_service = build('sheets', 'v4', credentials=hlp.get_credentials())
         try:
