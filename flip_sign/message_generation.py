@@ -464,14 +464,18 @@ class BasicTextMessage(Message):
 
         super().__init__(frequency=frequency)
 
-    def render(self):
+    def render(self, log_render: bool = True):
         """
         Prepare the message for display.  Determine best parameters and save the image and resulting params.
 
+        :param log_render: (bool): whether to call self.log_render.  default True
         :return: None
         """
 
-        self.log_render()
+        if log_render:
+            self.log_render()
+        else:
+            pass
         image, params, spacing = hlp.draw_text_best_parameters(params_order=self.font_parameters,
                                                                bbox_size=(168, 21), text=self.text,
                                                                **self.draw_text_kwargs)
@@ -591,7 +595,7 @@ class AccuweatherDescription(BasicTextMessage):
             if self.text == '':
                 raise ValueError("Weather Description Obj: Provided date not found in API response.")
 
-        super().render()
+        super().render(log_render=False)
 
 
 weather_stub_default_wrap_params = (

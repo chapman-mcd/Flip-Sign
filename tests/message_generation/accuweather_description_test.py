@@ -1,3 +1,4 @@
+import logging
 import flip_sign.helpers
 from flip_sign.assets import root_dir
 from flip_sign.message_generation import AccuweatherDescription
@@ -95,3 +96,25 @@ def test_string_rep(mock_accuweather):
 
     assert str(test_msg) == string_answer
 
+
+@patch(f'{flip_sign.message_generation.__name__}.hlp.accuweather_api_request',
+       wraps=flip_sign.helpers.accuweather_api_request)
+@patch(f'{flip_sign.message_generation.__name__}.datetime.date', wraps=datetime.date)
+def test_weather_description_logging_repeat(mock_datetime, mock_accuweather, caplog):
+    caplog.set_level(logging.INFO)
+    logging.getLogger('').info("An initial message to ensure there are at least 2 log entries")
+    fake_now = datetime.datetime(year=2023, month=2, day=9, hour=7, minute=15, second=38)
+    fake_today = fake_now.date()
+    mock_datetime.today.return_value = fake_today
+    with open("./message_generation/test_assets/NamelessTN_5DayForecast_Metric.txt") as f:
+        nameless_tn_forecast_resp = json.loads(f.read())
+        mock_accuweather.return_value = nameless_tn_forecast_resp
+        locstr = nameless_tn_location_resp['LocalizedName']
+
+    test_msg = AccuweatherDescription(location=nameless_tn_location_resp, headline=True)
+    test_msg.render()
+    test_msg.get_image().save("./message_generation/test_output/Test_Weather_Desc_01.png")
+    assert test_msg.text == locstr + ":" + nameless_tn_forecast_resp['Headline']['Text']
+
+    # confirm no repeat logging
+    assert not caplog.records[-1].getMessage() == caplog.records[-2].getMessage()
