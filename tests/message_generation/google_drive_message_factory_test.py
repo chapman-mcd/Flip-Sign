@@ -1,3 +1,4 @@
+import logging
 from flip_sign.message_generation import GoogleDriveImageMessageFactory, ImageMessage
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -120,3 +121,30 @@ def test_download_changed_file():
                 download_mock.assert_called_once()
                 assert download_mock.call_args.kwargs['file_id'] == '1tac52DqQ3joNT4OBvhy4Z76V2txjb-to'
                 assert download_mock.call_args.kwargs['out_path'] == Path(cache_dir + file_names[4])
+
+
+def test_google_drive_logging(caplog):
+    caplog.set_level(logging.INFO)
+    with open(root_dir + "/../tests/message_generation/test_assets/google_drive_responses_1_page.json") as f:
+        results = json.load(f)
+
+    with patch('flip_sign.message_generation.build') as build_mock:
+        with patch('flip_sign.message_generation.hlp.download_file_google_drive') as download_mock:
+            build_mock.return_value.files.return_value.list.return_value.execute.return_value.get.return_value = results
+
+            next_mocks = [None, None]
+
+            build_mock.return_value.files.return_value.list_next.side_effect = next_mocks
+
+            factory = GoogleDriveImageMessageFactory(keys['GoogleDriveFolder'])
+
+            outputs = factory.generate_messages()
+
+            assert len(outputs) == len(answers)
+            for output, answer in zip(outputs, answers):
+                assert_image_message_equal(output, answer)
+
+            download_mock.assert_not_called()
+
+            assert caplog.records[-1].getMessage() == "Beginning message generation for " + \
+                   "GoogleDriveImageMessageFactory: " + keys['GoogleDriveFolder']

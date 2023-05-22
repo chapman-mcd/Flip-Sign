@@ -1,3 +1,4 @@
+import logging
 import flip_sign.message_generation as msg_gen
 from flip_sign.variable_date_functions import mlk_day
 from tests.helpers.draw_text_test import image_equal
@@ -269,3 +270,24 @@ def test_sheet_not_found():
         error_text = "Error generating messages from google sheet.  Sheet id: " + "blurgh"
 
         assert_message_gen_objects_equal(outputs[0], msg_gen.BasicTextMessage(error_text))
+
+
+def test_google_sheet_logging(caplog):
+    caplog.set_level(logging.INFO)
+    with open(root_dir + "/../tests/message_generation/test_assets/google_sheet_responses_harder.json", 'r') as f:
+        results = json.load(f)
+
+    with patch('flip_sign.message_generation.build') as build_mock:
+        build_mock.return_value.spreadsheets.return_value.values.return_value.get.return_value.execute.return_value = \
+            results
+
+        factory = msg_gen.GoogleSheetMessageFactory(sheet_id="blurgh")
+
+        outputs = factory.generate_messages()
+
+        assert len(outputs) == len(harder_test_answers)
+
+        for answer, output in zip(harder_test_answers, outputs):
+            assert_message_gen_objects_equal(answer, output)
+
+    assert caplog.records[-1].getMessage() == "Beginning message generation for " + "Google SheetMessageFactory: blurgh"
