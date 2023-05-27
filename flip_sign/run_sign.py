@@ -7,7 +7,7 @@ import random
 from flip_sign.assets import keys
 from google.auth.exceptions import TransportError
 from urllib.error import URLError
-from PIL import Image
+from socket import timeout as SocketTimeoutError
 import flip_sign.config as config
 import time
 import logging
@@ -49,7 +49,8 @@ def run_sign():
                 messages = recursive_message_generate([GoogleSheetMessageFactory(sheet_id=keys['GoogleSheet'])])
                 random.shuffle(messages)
                 updated = True
-            except (TransportError, URLError):
+            except (TransportError, URLError, SocketTimeoutError) as e:
+                run_sign_logger.warning("Internet error generating messages.  Error details: " + str(e))
                 wait_time = 2 * (2 ** n_fails)
                 retry_time = datetime.datetime.now() + datetime.timedelta(seconds=wait_time)
                 display.update(BasicTextMessage("Internet error generating messages.  Trying again at " +
