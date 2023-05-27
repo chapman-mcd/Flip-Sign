@@ -12,8 +12,6 @@ cache_dir = root_dir + "/cache/google_drive_images/"
 file_names = ['Henry_Signscape_1_-_Title_H.png',
               'PupuMeleca_PupuShishi_Unk_CarronaRua_Rua.png',
               'Africa_SouthAmerica_Untitled_FernandodeNoronha_MatoGrosso.png',
-              'test_random_portuguese.png',
-              'test_avett_datdot.png',
               'Nyan_Cat_Signscape.png',
               'Henry_Signscape_3_-_A_Rio_de_Janeiro_Bop_Meleca.png',
               'Henry_Signscape_2_-_Title_A_Magin_Margret_Basement_House.png',
@@ -35,7 +33,8 @@ def assert_image_message_equal(first_message: ImageMessage, second_message: Imag
 
 
 def test_multi_page_results():
-    with open(root_dir + "/../tests/message_generation/test_assets/google_drive_responses_multi_page.json") as f:
+    with open(root_dir +
+              "/../tests/message_generation/test_assets/google_drive_responses_multi_page_trashed.json") as f:
         results = json.load(f)
 
     with patch('flip_sign.message_generation.build') as build_mock:
@@ -64,7 +63,7 @@ def test_multi_page_results():
 
 
 def test_single_page_results():
-    with open(root_dir + "/../tests/message_generation/test_assets/google_drive_responses_1_page.json") as f:
+    with open(root_dir + "/../tests/message_generation/test_assets/google_drive_responses_1_page_trashed.json") as f:
         results = json.load(f)
 
     with patch('flip_sign.message_generation.build') as build_mock:
@@ -91,7 +90,8 @@ checksums[4] = "different checksum lol"
 
 
 def test_download_changed_file():
-    with open(root_dir + "/../tests/message_generation/test_assets/google_drive_responses_multi_page.json") as f:
+    with open(root_dir +
+              "/../tests/message_generation/test_assets/google_drive_responses_multi_page_trashed.json") as f:
         results = json.load(f)
 
     with patch('flip_sign.message_generation.build') as build_mock:
@@ -119,13 +119,13 @@ def test_download_changed_file():
                     assert_image_message_equal(output, answer)
 
                 download_mock.assert_called_once()
-                assert download_mock.call_args.kwargs['file_id'] == '1tac52DqQ3joNT4OBvhy4Z76V2txjb-to'
+                assert download_mock.call_args.kwargs['file_id'] == '1P_NPOtEMdInMfR_RgPOlime32Gmmt69z'
                 assert download_mock.call_args.kwargs['out_path'] == Path(cache_dir + file_names[4])
 
 
 def test_google_drive_logging(caplog):
     caplog.set_level(logging.INFO)
-    with open(root_dir + "/../tests/message_generation/test_assets/google_drive_responses_1_page.json") as f:
+    with open(root_dir + "/../tests/message_generation/test_assets/google_drive_responses_1_page_trashed.json") as f:
         results = json.load(f)
 
     with patch('flip_sign.message_generation.build') as build_mock:

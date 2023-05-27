@@ -933,7 +933,7 @@ class GoogleDriveImageMessageFactory(MessageFactory):
         drive_service = build('drive', 'v3', credentials=hlp.get_credentials())
 
         files_request = drive_service.files().list(q=self.drive_folder,
-                                                   fields="nextPageToken, files(id, name, sha256Checksum)")
+                                                   fields="nextPageToken, files(id, name, sha256Checksum, trashed)")
 
         pages = []
         while files_request is not None:
@@ -944,10 +944,12 @@ class GoogleDriveImageMessageFactory(MessageFactory):
         messages_out = []
         for page in pages:
             for file in page:
-                file_path = Path(root_dir + "/cache/google_drive_images/" + file['name'])
-                if not hlp.sha256_with_default(file_path) == file['sha256Checksum']:
-                    hlp.download_file_google_drive(file_id=file['id'], out_path=file_path, drive_service=drive_service)
-                messages_out.append(ImageMessage(file_path))
+                if not file['trashed']:
+                    file_path = Path(root_dir + "/cache/google_drive_images/" + file['name'])
+                    if not hlp.sha256_with_default(file_path) == file['sha256Checksum']:
+                        hlp.download_file_google_drive(file_id=file['id'], out_path=file_path,
+                                                       drive_service=drive_service)
+                    messages_out.append(ImageMessage(file_path))
         return messages_out
 
 
