@@ -496,7 +496,7 @@ class DateMatchTextMessage(BasicTextMessage):
         """
         Initializes the message.
 
-        :param text: (str or list): the text to be displayed in the message
+        :param text: (str): the text to be displayed in the message
         :param frequency: (float): the probability that the message will display
         """
 
