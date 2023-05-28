@@ -1,6 +1,7 @@
 import flip_sign.helpers as hlp
 from PIL import Image
 import hashlib
+import pytest
 
 press_start_path = r'../flip_sign/assets/fonts/PressStart2P.ttf'
 dat_dot_path = r'../flip_sign/assets/fonts/DatDot_edited_v1.ttf'
@@ -247,3 +248,13 @@ def test_vertical_horizontal_align(caplog):
                "Vertical align provided pushes drawn text off image.  Text:" + str(text)
 
 
+def test_text_list_wrap_text_true():
+    full_sign_size = (168, 21)
+    # test a message that fits in a medium font
+    text = ["I call it a bargain:", "the best I ever had"]
+
+    error_text = "wrap_text must be False if text is passed as list."
+    with pytest.raises(ValueError, match=error_text):
+        _ = hlp.draw_text_best_parameters(params_order=default_wrap_parameters, bbox_size=full_sign_size, text=text,
+                                          vertical_align='center', horizontal_align='center', text_align='center',
+                                          fixed_spacing=None, wrap_text=True)

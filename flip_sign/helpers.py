@@ -587,6 +587,9 @@ def draw_text_best_parameters(params_order: tuple, bbox_size: tuple, text: Union
                 spacing: (int): the line spacing used with ImageDraw.Draw.multiline_text
     """
 
+    if type(text) == list and wrap_text:
+        raise ValueError("wrap_text must be False if text is passed as list.")
+
     for wrap_parameters in params_order:
         # select appropriate bbox function
         if not wrap_text:
