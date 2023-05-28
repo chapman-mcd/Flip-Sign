@@ -462,6 +462,17 @@ class BasicTextMessage(Message):
         self.applied_params = None
         self.string_rep = "BasicTextMessage: text=" + str(self.text)
 
+        try:
+            wrap_text = kwargs['wrap_text']
+        except KeyError:
+            wrap_text = True
+
+        if type(text) == list and wrap_text:
+            self.display = False
+            message_gen_logger.warning("Improper parameters.  wrap_text must be False if text is passed as list."
+                                       + "Message: " + self.string_rep)
+            return
+
         super().__init__(frequency=frequency)
 
     def render(self, log_render: bool = True):

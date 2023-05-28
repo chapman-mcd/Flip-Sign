@@ -107,3 +107,15 @@ def test_string_representation():
     test_msg = BasicTextMessage(text="This is a test.")
 
     assert str(test_msg) == "BasicTextMessage: text=This is a test."
+
+
+def test_type_list_wrap_text_true(caplog):
+    text = ['You wrote a note with chalk on my door,',
+            "a message I'd known long before:",
+            "'On any given day you'll find me gone'"]
+    test_msg = BasicTextMessage(text=text, frequency=1)
+
+    assert not test_msg
+    assert test_msg.init_failure
+    first_part_message = "Improper parameters.  wrap_text must be False if text is passed as list."
+    assert caplog.records[-1].getMessage()[:len(first_part_message)] == first_part_message
