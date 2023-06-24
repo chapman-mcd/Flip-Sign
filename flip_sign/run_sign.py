@@ -71,9 +71,11 @@ def run_sign():
                 next_start = datetime.datetime.combine(datetime.date.today() + datetime.timedelta(days=1),
                                                        config.START_TIME)
                 time.sleep((next_start - datetime.datetime.now()).total_seconds())
+                break  # break display loop to force message list update
             if datetime.datetime.now().time() < config.START_TIME:  # if before start time, use today
                 next_start = datetime.datetime.combine(datetime.date.today(), config.START_TIME)
                 time.sleep((next_start - datetime.datetime.now()).total_seconds())
+                break  # break display loop to force message list update
 
             # skip messages with display=False and increment init failure if applicable
             if not message:
